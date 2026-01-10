@@ -1,0 +1,70 @@
+# .gitignore for Voice Trading Journal
+
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+out
+build
+dist
+
+# Database
+*.db
+*.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Misc
+*.pem
+
+*.mp4
+*.zip
+*.exe
+*.log
+node_modules/
+.env
+screenshots/
+data/
+# Build outputs
+dist-electron/
+win-unpacked/
+
+# Executables
+*.exe
+
+# Logs & env
+*.log
+.env
+
+dist-electron/
+win-unpacked/
+*.exe

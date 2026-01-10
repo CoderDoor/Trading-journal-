@@ -1,0 +1,109 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./journal.db"
+}
+
+model JournalEntry {
+  id              String   @id @default(uuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Trade Details
+  instrument      String?
+  tradeType       String?  // BUY, SELL, CALL, PUT
+  timeframe       String?
+  entryPrice      Float?
+  stopLoss        Float?
+  target          Float?
+  riskReward      Float?
+  outcome         String?  // WIN, LOSS, BE, RUNNING
+  
+  // Analysis
+  tradeReason     String?
+  strategyLogic   String?
+  
+  // Pre-Trade Checklist
+  htfBiasAligned  Boolean  @default(false)
+  liquidityTaken  Boolean  @default(false)
+  entryAtPOI      Boolean  @default(false)
+  riskManaged     Boolean  @default(false)
+  
+  // ICT Strategy Checklist
+  bosConfirmed    Boolean  @default(false)
+  mssConfirmed    Boolean  @default(false)
+  chochConfirmed  Boolean  @default(false)
+  orderBlockEntry Boolean  @default(false)
+  fvgEntry        Boolean  @default(false)
+  killZoneEntry   Boolean  @default(false)
+  
+  // Trading Session Checklist
+  asianSession    Boolean  @default(false)
+  londonSession   Boolean  @default(false)
+  nySession       Boolean  @default(false)
+  londonClose     Boolean  @default(false)
+  
+  emotionState    String?  // CALM, FEAR, FOMO, REVENGE
+  
+  // Reflection
+  whatWentWell    String?
+  whatWentWrong   String?
+  improvement     String?
+  
+  // Screenshots (JSON array for multiple screenshots)
+  screenshot      String?
+  screenshots     String?  // JSON array of base64 images
+  
+  // Custom Tags (JSON array)
+  tags            String?  // JSON array of tag strings
+  
+  // Trade Templates
+  templateName    String?  // If saved as template
+  
+  // Raw Data
+  rawTranscript   String
+
+  // Auto-detected session
+  autoDetectedSession String?
+
+  // Performance indexes for faster queries
+  @@index([createdAt])
+  @@index([instrument])
+  @@index([outcome])
+  @@index([timeframe])
+  @@index([emotionState])
+}
+
+// Custom Tags model for user-defined tags
+model Tag {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+}
+
+// Trade Templates model
+model TradeTemplate {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  instrument      String?
+  tradeType       String?
+  timeframe       String?
+  strategyLogic   String?
+  htfBiasAligned  Boolean  @default(false)
+  liquidityTaken  Boolean  @default(false)
+  entryAtPOI      Boolean  @default(false)
+  riskManaged     Boolean  @default(false)
+  bosConfirmed    Boolean  @default(false)
+  mssConfirmed    Boolean  @default(false)
+  chochConfirmed  Boolean  @default(false)
+  orderBlockEntry Boolean  @default(false)
+  fvgEntry        Boolean  @default(false)
+  killZoneEntry   Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
