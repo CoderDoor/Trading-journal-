@@ -1,5 +1,37 @@
 'use client';
 
+// SVG Icons
+const MicIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /><path d="M19 10v2a7 7 0 0 1-14 0v-2" /><line x1="12" x2="12" y1="19" y2="22" />
+    </svg>
+);
+const StopIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+        <rect x="6" y="6" width="12" height="12" rx="2" />
+    </svg>
+);
+const LoaderIcon = () => (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ animation: 'spin 1s linear infinite' }}>
+        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+    </svg>
+);
+const KeyboardIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect width="20" height="16" x="2" y="4" rx="2" ry="2" /><path d="M6 8h.001" /><path d="M10 8h.001" /><path d="M14 8h.001" /><path d="M18 8h.001" /><path d="M8 12h.001" /><path d="M12 12h.001" /><path d="M16 12h.001" /><path d="M7 16h10" />
+    </svg>
+);
+const EditIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" />
+    </svg>
+);
+const SparklesIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z" /><path d="M5 3v4" /><path d="M19 17v4" /><path d="M3 5h4" /><path d="M17 19h4" />
+    </svg>
+);
+
 interface InputStepProps {
     mode: 'voice' | 'text';
     setMode: (mode: 'voice' | 'text') => void;
@@ -86,7 +118,10 @@ export function InputStep({
                             boxShadow: mode === 'voice' ? '0 4px 15px rgba(139, 92, 246, 0.4)' : 'none',
                         }}
                     >
-                        🎙️ Voice
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        </svg>
+                        Voice
                     </button>
                     <button
                         onClick={() => setMode('text')}
@@ -108,7 +143,7 @@ export function InputStep({
                             boxShadow: mode === 'text' ? '0 4px 15px rgba(139, 92, 246, 0.4)' : 'none',
                         }}
                     >
-                        ⌨️ Type
+                        <KeyboardIcon /> Type
                     </button>
                 </div>
             </div>
@@ -131,7 +166,6 @@ export function InputStep({
                                 borderRadius: '50%',
                                 border: 'none',
                                 cursor: isProcessing || isModelLoading ? 'wait' : 'pointer',
-                                fontSize: '3rem',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -144,9 +178,10 @@ export function InputStep({
                                     : '0 20px 40px rgba(139, 92, 246, 0.3)',
                                 animation: isRecording ? 'pulse-ring 1.5s ease-out infinite' : 'none',
                                 transition: 'all 0.3s ease',
+                                color: 'white',
                             }}
                         >
-                            {isProcessing ? '⏳' : isRecording ? '⏹️' : '🎙️'}
+                            {isProcessing ? <LoaderIcon /> : isRecording ? <StopIcon /> : <MicIcon />}
                         </button>
                     </div>
 
@@ -160,7 +195,7 @@ export function InputStep({
                         {isModelLoading && `Loading AI model... ${loadProgress || 0}%`}
                         {isProcessing && 'Processing audio...'}
                         {!isProcessing && !isModelLoading && (
-                            isRecording ? '🔴 Recording... Tap to stop' : 'Tap the microphone to start'
+                            isRecording ? 'Recording... Tap to stop' : 'Tap the microphone to start'
                         )}
                     </p>
 
@@ -220,7 +255,7 @@ export function InputStep({
                                 alignItems: 'center',
                                 gap: '0.5rem',
                             }}>
-                                ✨ Transcription
+                                <SparklesIcon /> Transcription
                             </span>
                             {transcript && (
                                 <span style={{
@@ -272,7 +307,7 @@ export function InputStep({
                         gap: '0.75rem',
                         marginBottom: '1.25rem',
                     }}>
-                        <span style={{ fontSize: '1.5rem' }}>📝</span>
+                        <EditIcon />
                         <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
                             Type Your Trade Journal
                         </h3>
@@ -300,7 +335,7 @@ export function InputStep({
                         fontSize: '0.85rem',
                         marginTop: '0.75rem',
                     }}>
-                        💡 Tip: Include instrument, entry/exit prices, stop loss, and reasoning
+                        Tip: Include instrument, entry/exit prices, stop loss, and reasoning
                     </p>
                 </div>
             )}
@@ -341,6 +376,10 @@ export function InputStep({
                     0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.4), 0 20px 40px rgba(244, 63, 94, 0.3); }
                     70% { box-shadow: 0 0 0 20px rgba(244, 63, 94, 0), 0 20px 40px rgba(244, 63, 94, 0.3); }
                     100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0), 0 20px 40px rgba(244, 63, 94, 0.3); }
+                }
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
                 }
             `}</style>
         </div>

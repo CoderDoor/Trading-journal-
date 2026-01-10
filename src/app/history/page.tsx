@@ -3,6 +3,19 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { JournalEntry } from '@/types/journal';
 
+// SVG Icons
+const TrashIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>;
+const EditIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>;
+const SaveIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /></svg>;
+const SearchIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>;
+const BookIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></svg>;
+const FileIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>;
+const ClockIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>;
+const ChartIcon = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>;
+const ImageIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" /></svg>;
+const MicIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" /></svg>;
+const InboxIcon = () => <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>;
+
 // Delete Confirmation Modal Component
 function DeleteModal({ isOpen, onClose, onConfirm, entryName }: {
     isOpen: boolean;
@@ -14,7 +27,7 @@ function DeleteModal({ isOpen, onClose, onConfirm, entryName }: {
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <h3 style={{ marginBottom: '1rem', color: 'var(--color-loss)' }}>🗑️ Delete Entry</h3>
+                <h3 style={{ marginBottom: '1rem', color: 'var(--color-loss)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><TrashIcon /> Delete Entry</h3>
                 <p style={{ marginBottom: '1.5rem' }}>
                     Are you sure you want to delete <strong>{entryName || 'this entry'}</strong>? This action cannot be undone.
                 </p>
@@ -54,7 +67,7 @@ function ImageModal({ images, currentIndex, onClose, onNext, onPrev }: {
                 background: 'rgba(255,255,255,0.1)', border: 'none',
                 color: 'white', fontSize: '1.5rem', width: '50px', height: '50px',
                 borderRadius: '50%', cursor: 'pointer',
-            }}>✕</button>
+            }}>×</button>
 
             {/* Previous Button */}
             {images.length > 1 && currentIndex > 0 && (
@@ -165,7 +178,7 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                 boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }} onClick={(e) => e.stopPropagation()}>
                 <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    ✏️ Edit Trade Entry
+                    <EditIcon /> Edit Trade Entry
                 </h3>
                 <form onSubmit={(e) => {
                     e.preventDefault();
@@ -225,21 +238,21 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
 
                     {/* Text Areas */}
                     <div style={{ marginBottom: '1rem' }}>
-                        <label style={labelStyle}>📝 Trade Reason</label>
+                        <label style={labelStyle}>Trade Reason</label>
                         <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.tradeReason} onChange={(e) => setFormData({ ...formData, tradeReason: e.target.value })} placeholder="Why did you take this trade?" />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--color-profit)' }}>✅ What Went Well</label>
+                            <label style={{ ...labelStyle, color: 'var(--color-profit)' }}>What Went Well</label>
                             <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.whatWentWell} onChange={(e) => setFormData({ ...formData, whatWentWell: e.target.value })} />
                         </div>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--color-loss)' }}>❌ What Went Wrong</label>
+                            <label style={{ ...labelStyle, color: 'var(--color-loss)' }}>What Went Wrong</label>
                             <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.whatWentWrong} onChange={(e) => setFormData({ ...formData, whatWentWrong: e.target.value })} />
                         </div>
                     </div>
                     <div style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ ...labelStyle, color: 'var(--color-accent)' }}>💡 Improvement</label>
+                        <label style={{ ...labelStyle, color: 'var(--color-accent)' }}>Improvement</label>
                         <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.improvement} onChange={(e) => setFormData({ ...formData, improvement: e.target.value })} placeholder="What will you do better next time?" />
                     </div>
 
@@ -255,7 +268,8 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                             background: 'linear-gradient(135deg, #b794f6 0%, #9f7aea 100%)',
                             border: 'none', borderRadius: '10px',
                             color: 'white', fontWeight: 600, cursor: 'pointer',
-                        }}>💾 Save Changes</button>
+                            display: 'flex', alignItems: 'center', gap: '0.5rem',
+                        }}><SaveIcon /> Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -367,15 +381,15 @@ export default function HistoryPage() {
 
             {/* Header with Title and Export Buttons */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text)' }}>
-                    📚 Journal History
+                <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
+                    <BookIcon /> Journal History
                 </h1>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button className="btn btn-primary" onClick={() => handleExport('csv')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        📊 CSV
+                        <ChartIcon /> CSV
                     </button>
                     <button className="btn btn-primary" onClick={() => handleExport('json')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                        📁 JSON
+                        <FileIcon /> JSON
                     </button>
                 </div>
             </div>
@@ -403,7 +417,7 @@ export default function HistoryPage() {
                     <option value="RUNNING">Running</option>
                 </select>
                 <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    🔍 Search
+                    <SearchIcon /> Search
                 </button>
                 <button type="button" className="btn btn-primary" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                     ▼ More
@@ -472,7 +486,7 @@ export default function HistoryPage() {
             {/* Entries List */}
             {entries.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', opacity: 0.5 }}><InboxIcon /></div>
                     <h3>No Entries Found</h3>
                     <p style={{ color: 'var(--color-text-muted)' }}>Start journaling your trades to see them here.</p>
                 </div>
@@ -504,12 +518,12 @@ export default function HistoryPage() {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
                                             {entry.timeframe && (
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    ⏱️ {entry.timeframe}
+                                                    <ClockIcon /> {entry.timeframe}
                                                 </span>
                                             )}
                                             {entry.strategyLogic && (
                                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    📊 {entry.strategyLogic.length > 30 ? entry.strategyLogic.substring(0, 30) + '...' : entry.strategyLogic}
+                                                    <ChartIcon /> {entry.strategyLogic.length > 30 ? entry.strategyLogic.substring(0, 30) + '...' : entry.strategyLogic}
                                                 </span>
                                             )}
                                         </div>
@@ -547,7 +561,7 @@ export default function HistoryPage() {
                                         {/* Emotion */}
                                         {entry.emotionState && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>😊 Emotion:</strong>
+                                                <strong style={{ color: 'var(--color-text)' }}>Emotion:</strong>
                                                 <span className="tag" style={{ marginLeft: '0.5rem', background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>
                                                     {entry.emotionState}
                                                 </span>
@@ -556,7 +570,7 @@ export default function HistoryPage() {
 
                                         {/* ICT Checklist */}
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <strong style={{ color: 'var(--color-text)' }}>✅ ICT Checklist:</strong>
+                                            <strong style={{ color: 'var(--color-text)' }}>ICT Checklist:</strong>
                                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                                                 {entry.htfBiasAligned && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>HTF Bias</span>}
                                                 {entry.liquidityTaken && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>Liquidity</span>}
@@ -573,7 +587,7 @@ export default function HistoryPage() {
 
                                         {/* Sessions */}
                                         <div style={{ marginBottom: '1rem' }}>
-                                            <strong style={{ color: 'var(--color-text)' }}>🕐 Sessions:</strong>
+                                            <strong style={{ color: 'var(--color-text)' }}>Sessions:</strong>
                                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
                                                 {entry.asianSession && <span className="tag">Asian</span>}
                                                 {entry.londonSession && <span className="tag">London</span>}
@@ -585,7 +599,7 @@ export default function HistoryPage() {
                                         {/* Trade Reason */}
                                         {entry.tradeReason && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>📝 Trade Reason:</strong>
+                                                <strong style={{ color: 'var(--color-text)' }}>Trade Reason:</strong>
                                                 <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.tradeReason}</p>
                                             </div>
                                         )}
@@ -593,26 +607,26 @@ export default function HistoryPage() {
                                         {/* Strategy Logic */}
                                         {entry.strategyLogic && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>🎯 Strategy:</strong>
+                                                <strong style={{ color: 'var(--color-text)' }}>Strategy:</strong>
                                                 <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.strategyLogic}</p>
                                             </div>
                                         )}
 
                                         {/* Post Trade Reflection */}
                                         <div style={{ background: 'var(--color-bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
-                                            <h4 style={{ marginBottom: '0.75rem', color: 'var(--color-accent)' }}>📝 Post Trade Reflection</h4>
+                                            <h4 style={{ marginBottom: '0.75rem', color: 'var(--color-accent)' }}>Post Trade Reflection</h4>
                                             <div className="grid grid-2" style={{ gap: '1rem' }}>
                                                 <div>
-                                                    <strong style={{ color: 'var(--color-profit)' }}>✅ What Went Well:</strong>
+                                                    <strong style={{ color: 'var(--color-profit)' }}>What Went Well:</strong>
                                                     <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWell || '—'}</p>
                                                 </div>
                                                 <div>
-                                                    <strong style={{ color: 'var(--color-loss)' }}>❌ What Went Wrong:</strong>
+                                                    <strong style={{ color: 'var(--color-loss)' }}>What Went Wrong:</strong>
                                                     <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWrong || '—'}</p>
                                                 </div>
                                             </div>
                                             <div style={{ marginTop: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-accent)' }}>💡 Improvement:</strong>
+                                                <strong style={{ color: 'var(--color-accent)' }}>Improvement:</strong>
                                                 <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.improvement || '—'}</p>
                                             </div>
                                         </div>
@@ -622,7 +636,7 @@ export default function HistoryPage() {
                                             const screenshots = entry.screenshot.split('|||').filter(Boolean);
                                             return (
                                                 <div style={{ marginBottom: '1rem' }}>
-                                                    <strong style={{ color: 'var(--color-text)' }}>📸 Trade Screenshot{screenshots.length > 1 ? 's' : ''}: <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''} - click to enlarge)</span></strong>
+                                                    <strong style={{ color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ImageIcon /> Trade Screenshot{screenshots.length > 1 ? 's' : ''}: <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''} - click to enlarge)</span></strong>
                                                     <div style={{
                                                         marginTop: '0.5rem',
                                                         display: 'grid',
@@ -663,15 +677,15 @@ export default function HistoryPage() {
                                         {/* Raw Transcript */}
                                         {entry.rawTranscript && (
                                             <div style={{ marginBottom: '1rem' }}>
-                                                <strong>🎙️ Original Transcript:</strong>
+                                                <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MicIcon /> Original Transcript:</strong>
                                                 <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>{entry.rawTranscript}</p>
                                             </div>
                                         )}
 
                                         {/* Actions */}
                                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleEditClick(entry); }} style={{ padding: '0.5rem 1rem' }}>✏️ Edit</button>
-                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry); }} style={{ padding: '0.5rem 1rem', color: 'var(--color-loss)' }}>🗑️ Delete</button>
+                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleEditClick(entry); }} style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><EditIcon /> Edit</button>
+                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry); }} style={{ padding: '0.5rem 1rem', color: 'var(--color-loss)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><TrashIcon /> Delete</button>
                                         </div>
                                     </div>
                                 )}

@@ -4,9 +4,17 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { JournalEntry } from '@/types/journal';
 
+// SVG Icons for StatCard
+const ChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>;
+const TargetIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>;
+const CheckIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>;
+const XIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18" /><path d="m6 6 12 12" /></svg>;
+const CalendarIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2" /><line x1="16" x2="16" y1="2" y2="6" /><line x1="8" x2="8" y1="2" y2="6" /><line x1="3" x2="21" y1="10" y2="10" /></svg>;
+const TrendUpIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" /></svg>;
+
 // Stats Card Component
 function StatCard({ label, value, icon, color, trend }: {
-    label: string; value: string; icon: string; color: string; trend?: string;
+    label: string; value: string; icon: React.ReactNode; color: string; trend?: string;
 }) {
     return (
         <div style={{
@@ -21,7 +29,7 @@ function StatCard({ label, value, icon, color, trend }: {
         }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>{label}</span>
-                <span style={{ fontSize: '1.5rem' }}>{icon}</span>
+                <span style={{ color }}>{icon}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem' }}>
                 <span style={{ fontSize: '2rem', fontWeight: 700, color }}>{value}</span>
@@ -204,10 +212,10 @@ export default function DashboardPage() {
                 gap: '1rem',
                 marginBottom: '2rem',
             }}>
-                <StatCard label="Total Trades" value={totalTrades.toString()} icon="📊" color="var(--color-accent)" />
-                <StatCard label="Win Rate" value={`${winRate}%`} icon="🎯" color={winRate >= 50 ? 'var(--color-profit)' : 'var(--color-loss)'} />
-                <StatCard label="Wins" value={wins.toString()} icon="✅" color="var(--color-profit)" />
-                <StatCard label="Losses" value={losses.toString()} icon="❌" color="var(--color-loss)" />
+                <StatCard label="Total Trades" value={totalTrades.toString()} icon={<ChartIcon />} color="var(--color-accent)" />
+                <StatCard label="Win Rate" value={`${winRate}%`} icon={<TargetIcon />} color={winRate >= 50 ? 'var(--color-profit)' : 'var(--color-loss)'} />
+                <StatCard label="Wins" value={wins.toString()} icon={<CheckIcon />} color="var(--color-profit)" />
+                <StatCard label="Losses" value={losses.toString()} icon={<XIcon />} color="var(--color-loss)" />
             </div>
 
             {/* Calendar Section */}
@@ -221,7 +229,7 @@ export default function DashboardPage() {
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text)' }}>
-                        📅 Weekly P&L
+                        <CalendarIcon /> Weekly P&L
                     </h2>
                     <Link href="/calendar" style={{
                         color: 'var(--color-accent)',
@@ -252,7 +260,7 @@ export default function DashboardPage() {
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                     <h2 style={{ fontSize: '1.25rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text)' }}>
-                        📈 Recent Trades
+                        <TrendUpIcon /> Recent Trades
                     </h2>
                     <Link href="/history" style={{
                         color: 'var(--color-accent)',
