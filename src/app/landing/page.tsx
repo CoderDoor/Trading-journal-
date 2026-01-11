@@ -113,7 +113,7 @@ export default function LandingPage() {
     const handleGetStarted = () => {
         setIsLoading(true);
         setTimeout(() => {
-            router.push('/journal');
+            router.push('/');
         }, 2000);
     };
 

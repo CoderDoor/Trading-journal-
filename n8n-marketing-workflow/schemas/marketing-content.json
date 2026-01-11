@@ -1,0 +1,82 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Marketing Content",
+    "description": "Output schema for the content creation step",
+    "type": "object",
+    "required": [
+        "twitter_thread",
+        "linkedin_post",
+        "reddit_post",
+        "landing_hero"
+    ],
+    "properties": {
+        "twitter_thread": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "maxLength": 280
+            },
+            "minItems": 3,
+            "maxItems": 10,
+            "description": "Twitter thread tweets"
+        },
+        "linkedin_post": {
+            "type": "string",
+            "maxLength": 3000,
+            "description": "Full LinkedIn post"
+        },
+        "reddit_post": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string",
+                    "maxLength": 300
+                },
+                "body": {
+                    "type": "string"
+                },
+                "subreddits": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "title",
+                "body"
+            ]
+        },
+        "email_subject_lines": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "A/B test subject lines"
+        },
+        "landing_hero": {
+            "type": "object",
+            "properties": {
+                "headline": {
+                    "type": "string"
+                },
+                "subheadline": {
+                    "type": "string"
+                },
+                "cta_text": {
+                    "type": "string"
+                }
+            },
+            "required": [
+                "headline",
+                "subheadline",
+                "cta_text"
+            ]
+        },
+        "producthunt_tagline": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Product Hunt tagline"
+        }
+    }
+}

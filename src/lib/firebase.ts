@@ -2,14 +2,14 @@ import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 
-// Firebase configuration
+// Firebase configuration - uses environment variables for security
 const firebaseConfig = {
-    apiKey: "AIzaSyCr1bY6iVJQpvkda3BMy6Ze3QwM1_QXbCQ",
-    authDomain: "trading-journal-21e69.firebaseapp.com",
-    projectId: "trading-journal-21e69",
-    storageBucket: "trading-journal-21e69.firebasestorage.app",
-    messagingSenderId: "43057549948",
-    appId: "1:43057549948:web:beba0197ca782c55de2ff9"
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCr1bY6iVJQpvkda3BMy6Ze3QwM1_QXbCQ",
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "trading-journal-21e69.firebaseapp.com",
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "trading-journal-21e69",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "trading-journal-21e69.firebasestorage.app",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "43057549948",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:43057549948:web:beba0197ca782c55de2ff9"
 };
 
 // Initialize Firebase

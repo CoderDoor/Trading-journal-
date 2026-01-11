@@ -1,0 +1,36 @@
+{
+    "name": "TrackEdge",
+    "short_name": "TrackEdge",
+    "description": "Smart Trading Journal for ICT & SMC Traders",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f0f17",
+    "theme_color": "#6366f1",
+    "orientation": "portrait-primary",
+    "icons": [
+        {
+            "src": "/icon-192.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "New Trade",
+            "url": "/",
+            "description": "Log a new trade"
+        },
+        {
+            "name": "Dashboard",
+            "url": "/dashboard",
+            "description": "View analytics"
+        }
+    ]
+}

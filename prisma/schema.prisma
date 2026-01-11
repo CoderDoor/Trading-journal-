@@ -69,12 +69,21 @@ model JournalEntry {
   // Auto-detected session
   autoDetectedSession String?
 
+  // Backtest fields
+  isBacktest         Boolean  @default(false)
+  backtestSessionId  String?
+  simulatedEntryTime DateTime?
+  simulatedExitTime  DateTime?
+  simulatedPnL       Float?
+
   // Performance indexes for faster queries
   @@index([createdAt])
   @@index([instrument])
   @@index([outcome])
   @@index([timeframe])
   @@index([emotionState])
+  @@index([isBacktest])
+  @@index([backtestSessionId])
 }
 
 // Custom Tags model for user-defined tags
@@ -107,3 +116,38 @@ model TradeTemplate {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
+
+// Historical OHLC data for backtesting
+model HistoricalData {
+  id        String   @id @default(uuid())
+  symbol    String
+  timeframe String   // 1m, 5m, 15m, 1h, 4h, 1d
+  timestamp DateTime
+  open      Float
+  high      Float
+  low       Float
+  close     Float
+  volume    Float?
+  
+  @@unique([symbol, timeframe, timestamp])
+  @@index([symbol, timeframe])
+}
+
+// Backtest session tracking
+model BacktestSession {
+  id          String   @id @default(uuid())
+  name        String
+  symbol      String
+  timeframe   String
+  startDate   DateTime
+  endDate     DateTime
+  totalTrades Int      @default(0)
+  winRate     Float?
+  profitFactor Float?
+  maxDrawdown Float?
+  netPnL      Float?
+  aiAnalysis  String?  // JSON string with AI insights
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

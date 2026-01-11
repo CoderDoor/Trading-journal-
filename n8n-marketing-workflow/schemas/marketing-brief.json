@@ -1,0 +1,117 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Marketing Brief",
+    "description": "Output schema for the code analysis step",
+    "type": "object",
+    "required": [
+        "product_name",
+        "category",
+        "target_audience",
+        "key_features",
+        "unique_selling_points"
+    ],
+    "properties": {
+        "product_name": {
+            "type": "string",
+            "description": "Name of the product"
+        },
+        "tagline": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "Short tagline (max 10 words)"
+        },
+        "category": {
+            "type": "string",
+            "enum": [
+                "SaaS",
+                "App",
+                "Tool",
+                "API",
+                "Library"
+            ],
+            "description": "Product category"
+        },
+        "problem_solved": {
+            "type": "string",
+            "description": "What problem the product solves"
+        },
+        "target_audience": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Target personas"
+        },
+        "key_features": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 3,
+            "maxItems": 10,
+            "description": "Main features with benefits"
+        },
+        "unique_selling_points": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "minItems": 1,
+            "maxItems": 5,
+            "description": "Differentiators"
+        },
+        "competitors": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "Direct competitors"
+        },
+        "keywords": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "SEO keywords"
+        },
+        "tone": {
+            "type": "string",
+            "enum": [
+                "professional",
+                "casual",
+                "technical",
+                "friendly"
+            ],
+            "description": "Brand voice tone"
+        },
+        "primary_channels": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": [
+                    "Twitter",
+                    "LinkedIn",
+                    "Reddit",
+                    "ProductHunt",
+                    "Email",
+                    "SEO",
+                    "YouTube",
+                    "TikTok"
+                ]
+            },
+            "description": "Best marketing channels"
+        },
+        "price_positioning": {
+            "type": "string",
+            "enum": [
+                "Free",
+                "Freemium",
+                "Premium",
+                "Enterprise"
+            ],
+            "description": "Pricing model"
+        }
+    }
+}

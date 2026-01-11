@@ -1,0 +1,491 @@
+{
+    "name": "Product Marketing Automation",
+    "nodes": [
+        {
+            "parameters": {},
+            "id": "trigger-manual",
+            "name": "Manual Trigger",
+            "type": "n8n-nodes-base.manualTrigger",
+            "typeVersion": 1,
+            "position": [
+                250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "jsCode": "// Input Configuration\nreturn [{\n  json: {\n    github_repo: 'CoderDoor/Trading-journal-',\n    github_owner: 'CoderDoor',\n    github_branch: 'main',\n    product_url: 'https://trackedge.app',\n    openai_model: 'gpt-4o'\n  }\n}];"
+            },
+            "id": "config-input",
+            "name": "Configuration",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                450,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "url": "=https://api.github.com/repos/{{ $json.github_owner }}/{{ $json.github_repo }}/contents/README.md",
+                "options": {
+                    "response": {
+                        "response": {
+                            "fullResponse": false,
+                            "responseFormat": "json"
+                        }
+                    }
+                },
+                "headerParameters": {
+                    "parameter": [
+                        {
+                            "name": "Accept",
+                            "value": "application/vnd.github.v3.raw"
+                        }
+                    ]
+                }
+            },
+            "id": "fetch-readme",
+            "name": "Fetch README",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                650,
+                200
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "github-token",
+                    "name": "GitHub Token"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "url": "=https://api.github.com/repos/{{ $json.github_owner }}/{{ $json.github_repo }}/contents/package.json",
+                "options": {
+                    "response": {
+                        "response": {
+                            "fullResponse": false,
+                            "responseFormat": "json"
+                        }
+                    }
+                },
+                "headerParameters": {
+                    "parameter": [
+                        {
+                            "name": "Accept",
+                            "value": "application/vnd.github.v3.raw"
+                        }
+                    ]
+                }
+            },
+            "id": "fetch-package",
+            "name": "Fetch package.json",
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.2,
+            "position": [
+                650,
+                400
+            ],
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "github-token",
+                    "name": "GitHub Token"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Combine fetched code files\nconst readme = $('Fetch README').first().json;\nconst packageJson = $('Fetch package.json').first().json;\nconst config = $('Configuration').first().json;\n\nreturn [{\n  json: {\n    ...config,\n    readme_content: typeof readme === 'string' ? readme : JSON.stringify(readme),\n    package_json: typeof packageJson === 'string' ? packageJson : JSON.stringify(packageJson),\n    fetched_at: new Date().toISOString()\n  }\n}];"
+            },
+            "id": "merge-code",
+            "name": "Merge Code Files",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are a senior product analyst and marketing strategist. Analyze the provided source code and generate a comprehensive marketing brief."
+                        },
+                        {
+                            "role": "user",
+                            "content": "=Analyze this product and create a marketing brief:\n\n## README:\n{{ $json.readme_content }}\n\n## Package.json:\n{{ $json.package_json }}\n\nProvide a JSON response with:\n{\n  \"product_name\": \"string\",\n  \"tagline\": \"string (max 10 words)\",\n  \"category\": \"SaaS | App | Tool | API | Library\",\n  \"problem_solved\": \"string\",\n  \"target_audience\": [\"persona 1\", \"persona 2\", \"persona 3\"],\n  \"key_features\": [\"feature 1\", \"feature 2\", \"feature 3\", \"feature 4\", \"feature 5\"],\n  \"unique_selling_points\": [\"usp 1\", \"usp 2\", \"usp 3\"],\n  \"competitors\": [\"competitor 1\", \"competitor 2\"],\n  \"keywords\": [\"keyword1\", \"keyword2\", \"keyword3\", \"keyword4\", \"keyword5\"],\n  \"tone\": \"professional | casual | technical | friendly\",\n  \"primary_channels\": [\"Twitter\", \"LinkedIn\", \"Reddit\", \"ProductHunt\"],\n  \"price_positioning\": \"Free | Freemium | Premium | Enterprise\"\n}\n\nRespond ONLY with valid JSON."
+                        }
+                    ]
+                },
+                "options": {
+                    "temperature": 0.7,
+                    "maxTokens": 2000
+                }
+            },
+            "id": "llm-analyze",
+            "name": "LLM: Analyze Code",
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.3,
+            "position": [
+                1050,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai-api",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse LLM response to JSON\nconst response = $json.message.content;\nlet marketingBrief;\n\ntry {\n  // Extract JSON from response\n  const jsonMatch = response.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    marketingBrief = JSON.parse(jsonMatch[0]);\n  } else {\n    throw new Error('No JSON found in response');\n  }\n} catch (e) {\n  marketingBrief = {\n    error: 'Failed to parse: ' + e.message,\n    raw_response: response\n  };\n}\n\nreturn [{ json: { marketing_brief: marketingBrief, analyzed_at: new Date().toISOString() } }];"
+            },
+            "id": "parse-brief",
+            "name": "Parse Marketing Brief",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1250,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are a growth marketing expert. Create a 30-day marketing plan based on the product analysis."
+                        },
+                        {
+                            "role": "user",
+                            "content": "=Based on this marketing brief, create a 30-day marketing plan:\n\n{{ JSON.stringify($json.marketing_brief, null, 2) }}\n\nProvide JSON response:\n{\n  \"strategy_summary\": \"2-3 sentence overview\",\n  \"week_1\": {\n    \"focus\": \"string\",\n    \"tasks\": [\"task 1\", \"task 2\", \"task 3\"]\n  },\n  \"week_2\": {\n    \"focus\": \"string\",\n    \"tasks\": [\"task 1\", \"task 2\", \"task 3\"]\n  },\n  \"week_3\": {\n    \"focus\": \"string\",\n    \"tasks\": [\"task 1\", \"task 2\", \"task 3\"]\n  },\n  \"week_4\": {\n    \"focus\": \"string\",\n    \"tasks\": [\"task 1\", \"task 2\", \"task 3\"]\n  },\n  \"content_calendar\": [\n    { \"day\": 1, \"channel\": \"Twitter\", \"content_type\": \"thread\", \"topic\": \"...\" },\n    { \"day\": 3, \"channel\": \"LinkedIn\", \"content_type\": \"post\", \"topic\": \"...\" }\n  ],\n  \"kpis\": [\"kpi 1\", \"kpi 2\", \"kpi 3\"]\n}\n\nRespond ONLY with valid JSON."
+                        }
+                    ]
+                },
+                "options": {
+                    "temperature": 0.7,
+                    "maxTokens": 3000
+                }
+            },
+            "id": "llm-strategy",
+            "name": "LLM: Generate Strategy",
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.3,
+            "position": [
+                1450,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai-api",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "model": "gpt-4o",
+                "messages": {
+                    "values": [
+                        {
+                            "role": "system",
+                            "content": "You are a viral content creator. Create engaging marketing content for social media."
+                        },
+                        {
+                            "role": "user",
+                            "content": "=Create marketing content for this product:\n\nProduct: {{ $('Parse Marketing Brief').first().json.marketing_brief.product_name }}\nTagline: {{ $('Parse Marketing Brief').first().json.marketing_brief.tagline }}\nFeatures: {{ $('Parse Marketing Brief').first().json.marketing_brief.key_features.join(', ') }}\nUSP: {{ $('Parse Marketing Brief').first().json.marketing_brief.unique_selling_points.join(', ') }}\nAudience: {{ $('Parse Marketing Brief').first().json.marketing_brief.target_audience.join(', ') }}\n\nGenerate JSON:\n{\n  \"twitter_thread\": [\n    \"Tweet 1 (hook - max 280 chars)\",\n    \"Tweet 2\",\n    \"Tweet 3\",\n    \"Tweet 4\",\n    \"Tweet 5 (CTA)\"\n  ],\n  \"linkedin_post\": \"Full LinkedIn post with emojis (max 1300 chars)\",\n  \"reddit_post\": {\n    \"title\": \"string\",\n    \"body\": \"string\",\n    \"subreddits\": [\"sub1\", \"sub2\"]\n  },\n  \"email_subject_lines\": [\"subject 1\", \"subject 2\", \"subject 3\"],\n  \"landing_hero\": {\n    \"headline\": \"string\",\n    \"subheadline\": \"string\",\n    \"cta_text\": \"string\"\n  },\n  \"producthunt_tagline\": \"string (max 60 chars)\"\n}\n\nRespond ONLY with valid JSON."
+                        }
+                    ]
+                },
+                "options": {
+                    "temperature": 0.8,
+                    "maxTokens": 3000
+                }
+            },
+            "id": "llm-content",
+            "name": "LLM: Create Content",
+            "type": "@n8n/n8n-nodes-langchain.openAi",
+            "typeVersion": 1.3,
+            "position": [
+                1650,
+                300
+            ],
+            "credentials": {
+                "openAiApi": {
+                    "id": "openai-api",
+                    "name": "OpenAI API"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse all content and prepare for distribution\nconst briefData = $('Parse Marketing Brief').first().json;\nconst strategyRaw = $('LLM: Generate Strategy').first().json.message.content;\nconst contentRaw = $('LLM: Create Content').first().json.message.content;\n\nfunction parseJSON(str) {\n  try {\n    const match = str.match(/\\{[\\s\\S]*\\}/);\n    return match ? JSON.parse(match[0]) : null;\n  } catch (e) {\n    return { error: e.message, raw: str };\n  }\n}\n\nconst strategy = parseJSON(strategyRaw);\nconst content = parseJSON(contentRaw);\n\nreturn [{\n  json: {\n    marketing_brief: briefData.marketing_brief,\n    strategy: strategy,\n    content: content,\n    generated_at: new Date().toISOString()\n  }\n}];"
+            },
+            "id": "compile-output",
+            "name": "Compile All Content",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1850,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "mode": "raw",
+                "jsonOutput": "={{ JSON.stringify($json, null, 2) }}",
+                "options": {}
+            },
+            "id": "output-json",
+            "name": "Output: Marketing Package",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                2050,
+                150
+            ],
+            "notes": "Full marketing package output"
+        },
+        {
+            "parameters": {
+                "documentId": {
+                    "__rl": true,
+                    "value": "",
+                    "mode": "id"
+                },
+                "sheetName": {
+                    "__rl": true,
+                    "value": "Marketing Data",
+                    "mode": "name"
+                },
+                "columns": {
+                    "mappingMode": "autoMapInputData",
+                    "value": {}
+                },
+                "options": {}
+            },
+            "id": "google-sheets",
+            "name": "Save to Google Sheets",
+            "type": "n8n-nodes-base.googleSheets",
+            "typeVersion": 4.4,
+            "position": [
+                2050,
+                450
+            ],
+            "disabled": true,
+            "notes": "Enable and configure to save data"
+        },
+        {
+            "parameters": {
+                "text": "={{ $json.content.twitter_thread[0] }}",
+                "additionalFields": {}
+            },
+            "id": "twitter-post",
+            "name": "Post to Twitter",
+            "type": "n8n-nodes-base.twitter",
+            "typeVersion": 2,
+            "position": [
+                2250,
+                150
+            ],
+            "disabled": true,
+            "notes": "Enable and configure Twitter credentials"
+        },
+        {
+            "parameters": {
+                "text": "={{ $json.content.linkedin_post }}",
+                "additionalFields": {}
+            },
+            "id": "linkedin-post",
+            "name": "Post to LinkedIn",
+            "type": "n8n-nodes-base.linkedIn",
+            "typeVersion": 1,
+            "position": [
+                2250,
+                300
+            ],
+            "disabled": true,
+            "notes": "Enable and configure LinkedIn credentials"
+        },
+        {
+            "parameters": {
+                "fromEmail": "marketing@yourcompany.com",
+                "toEmail": "test@example.com",
+                "subject": "={{ $json.content.email_subject_lines[0] }}",
+                "html": "=<h1>{{ $json.marketing_brief.product_name }}</h1><p>{{ $json.marketing_brief.tagline }}</p>"
+            },
+            "id": "send-email",
+            "name": "Send Email",
+            "type": "n8n-nodes-base.sendGrid",
+            "typeVersion": 1,
+            "position": [
+                2250,
+                450
+            ],
+            "disabled": true,
+            "notes": "Enable and configure SendGrid"
+        }
+    ],
+    "connections": {
+        "Manual Trigger": {
+            "main": [
+                [
+                    {
+                        "node": "Configuration",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Configuration": {
+            "main": [
+                [
+                    {
+                        "node": "Fetch README",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Fetch package.json",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch README": {
+            "main": [
+                [
+                    {
+                        "node": "Merge Code Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Fetch package.json": {
+            "main": [
+                [
+                    {
+                        "node": "Merge Code Files",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merge Code Files": {
+            "main": [
+                [
+                    {
+                        "node": "LLM: Analyze Code",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "LLM: Analyze Code": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Marketing Brief",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Marketing Brief": {
+            "main": [
+                [
+                    {
+                        "node": "LLM: Generate Strategy",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "LLM: Generate Strategy": {
+            "main": [
+                [
+                    {
+                        "node": "LLM: Create Content",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "LLM: Create Content": {
+            "main": [
+                [
+                    {
+                        "node": "Compile All Content",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Compile All Content": {
+            "main": [
+                [
+                    {
+                        "node": "Output: Marketing Package",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Save to Google Sheets",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Post to Twitter",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Post to LinkedIn",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Send Email",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1"
+    },
+    "staticData": null,
+    "tags": [
+        {
+            "name": "marketing"
+        },
+        {
+            "name": "automation"
+        },
+        {
+            "name": "ai"
+        }
+    ],
+    "pinData": {}
+}

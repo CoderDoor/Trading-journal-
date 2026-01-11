@@ -288,6 +288,7 @@ export default function HistoryPage() {
     const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; entry: JournalEntry | null }>({ isOpen: false, entry: null });
     const [editModal, setEditModal] = useState<{ isOpen: boolean; entry: JournalEntry | null }>({ isOpen: false, entry: null });
     const [lightbox, setLightbox] = useState<{ images: string[]; index: number }>({ images: [], index: -1 });
+    const [activeTab, setActiveTab] = useState<'live' | 'backtest'>('live');
 
     useEffect(() => { fetchEntries(); }, []);
 
@@ -351,6 +352,14 @@ export default function HistoryPage() {
         return { total: entries.length, wins, losses, winRate: total > 0 ? Math.round((wins / total) * 100) : 0 };
     }, [entries]);
 
+    // Filter entries by tab (live vs backtest)
+    const filteredEntries = useMemo(() => {
+        return entries.filter((e: any) => {
+            const isBacktest = e.isBacktest || false;
+            return activeTab === 'backtest' ? isBacktest : !isBacktest;
+        });
+    }, [entries, activeTab]);
+
     const formatDate = (date: Date | string) => {
         const d = new Date(date);
         return { day: d.getDate(), month: d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase() };
@@ -380,7 +389,7 @@ export default function HistoryPage() {
             <EditModal isOpen={editModal.isOpen} onClose={() => setEditModal({ isOpen: false, entry: null })} entry={editModal.entry} onSave={handleEditSave} />
 
             {/* Header with Title and Export Buttons */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                 <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
                     <BookIcon /> Journal History
                 </h1>
@@ -392,6 +401,60 @@ export default function HistoryPage() {
                         <FileIcon /> JSON
                     </button>
                 </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                <button
+                    onClick={() => setActiveTab('live')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: activeTab === 'live' ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
+                        border: activeTab === 'live' ? 'none' : '1px solid var(--color-border)',
+                        borderRadius: '10px',
+                        color: activeTab === 'live' ? 'white' : 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                    }}
+                >
+                    📊 Live Trades
+                    <span style={{
+                        marginLeft: '0.5rem',
+                        background: activeTab === 'live' ? 'rgba(255,255,255,0.2)' : 'var(--color-bg-tertiary)',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                    }}>
+                        {entries.filter((e: any) => !e.isBacktest).length}
+                    </span>
+                </button>
+                <button
+                    onClick={() => setActiveTab('backtest')}
+                    style={{
+                        padding: '0.75rem 1.5rem',
+                        background: activeTab === 'backtest' ? 'linear-gradient(135deg, #6366f1, #a855f7)' : 'var(--color-bg-secondary)',
+                        border: activeTab === 'backtest' ? 'none' : '1px solid var(--color-border)',
+                        borderRadius: '10px',
+                        color: activeTab === 'backtest' ? 'white' : 'var(--color-text-muted)',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        transition: 'all 0.2s ease',
+                    }}
+                >
+                    🧪 Backtest Journal
+                    <span style={{
+                        marginLeft: '0.5rem',
+                        background: activeTab === 'backtest' ? 'rgba(255,255,255,0.2)' : 'var(--color-bg-tertiary)',
+                        padding: '0.2rem 0.5rem',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                    }}>
+                        {entries.filter((e: any) => e.isBacktest).length}
+                    </span>
+                </button>
             </div>
 
             {/* Search Bar Row */}
@@ -484,15 +547,19 @@ export default function HistoryPage() {
             </div>
 
             {/* Entries List */}
-            {entries.length === 0 ? (
+            {filteredEntries.length === 0 ? (
                 <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
                     <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', opacity: 0.5 }}><InboxIcon /></div>
-                    <h3>No Entries Found</h3>
-                    <p style={{ color: 'var(--color-text-muted)' }}>Start journaling your trades to see them here.</p>
+                    <h3>{activeTab === 'backtest' ? 'No Backtest Trades' : 'No Entries Found'}</h3>
+                    <p style={{ color: 'var(--color-text-muted)' }}>
+                        {activeTab === 'backtest'
+                            ? 'Run backtests to see simulated trades here.'
+                            : 'Start journaling your trades to see them here.'}
+                    </p>
                 </div>
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {entries.map((entry) => {
+                    {filteredEntries.map((entry) => {
                         const isExpanded = expandedId === entry.id;
                         const dateInfo = formatDate(entry.createdAt);
                         return (
