@@ -89,6 +89,14 @@ const BacktestIcon = () => (
     </svg>
 );
 
+const RulebookIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+        <path d="M9 10h6" />
+        <path d="M9 14h6" />
+    </svg>
+);
+
 // TrackEdge Logo - Bull head with TE letters
 const TrackEdgeLogo = () => (
     <svg width="36" height="36" viewBox="0 0 40 40" fill="none">
@@ -148,6 +156,7 @@ export default function Sidebar() {
         { href: '/history', label: 'History', icon: <HistoryIcon /> },
         { href: '/calendar', label: 'Calendar', icon: <CalendarIcon /> },
         { href: '/backtest', label: 'Backtest', icon: <BacktestIcon /> },
+        { href: '/rulebook', label: 'Rulebook', icon: <RulebookIcon /> },
         { href: '/templates', label: 'Templates', icon: <TemplateIcon /> },
         { href: '/ai-review', label: 'AI Review', icon: <AIIcon /> },
         { href: '/mt5-import', label: 'MT5 Import', icon: <ImportIcon /> },

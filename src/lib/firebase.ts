@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { getStorage, ref, uploadString, getDownloadURL, listAll } from 'firebase/storage';
 
 // Firebase configuration - uses environment variables for security
 const firebaseConfig = {
@@ -17,6 +18,7 @@ const firebaseConfig = {
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Auth functions
@@ -173,4 +175,184 @@ export const syncEntriesToCloud = async (userId: string, entries: CloudEntry[]):
         console.log('✅ Fallback complete:', successCount, 'entries synced');
         return successCount;
     }
+};
+
+// ============================================
+// RULES SYNC
+// ============================================
+
+export interface CloudRule {
+    id: string;
+    name: string;
+    description?: string | null;
+    category: string;
+    condition?: string | null;
+    severity: string;
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export const syncRulesToCloud = async (userId: string, rules: CloudRule[]): Promise<number> => {
+    console.log('🔄 Syncing', rules.length, 'rules to cloud');
+    if (rules.length === 0) return 0;
+
+    try {
+        const batch = writeBatch(db);
+        for (const rule of rules) {
+            const ruleRef = doc(db, 'users', userId, 'rules', rule.id);
+            const cleaned: Record<string, any> = {};
+            for (const [key, value] of Object.entries(rule)) {
+                if (value !== undefined) cleaned[key] = value;
+            }
+            batch.set(ruleRef, cleaned, { merge: true });
+        }
+        await batch.commit();
+        console.log('✅ Rules synced:', rules.length);
+        return rules.length;
+    } catch (error) {
+        console.error('❌ Failed to sync rules:', error);
+        return 0;
+    }
+};
+
+export const downloadRulesFromCloud = async (userId: string): Promise<CloudRule[]> => {
+    console.log('📥 Downloading rules from cloud');
+    try {
+        const rulesRef = collection(db, 'users', userId, 'rules');
+        const snapshot = await getDocs(rulesRef);
+        console.log('✅ Downloaded', snapshot.docs.length, 'rules');
+        return snapshot.docs.map(doc => doc.data() as CloudRule);
+    } catch (error) {
+        console.error('❌ Failed to download rules:', error);
+        return [];
+    }
+};
+
+// ============================================
+// VIOLATIONS SYNC
+// ============================================
+
+export interface CloudViolation {
+    id: string;
+    ruleId: string;
+    ruleName: string;
+    journalEntryId?: string | null;
+    punishment: string;
+    punishmentType: string;
+    severity: string;
+    status: string;
+    completedAt?: string | null;
+    dueDate?: string | null;
+    notes?: string | null;
+    createdAt: string;
+}
+
+export const syncViolationsToCloud = async (userId: string, violations: CloudViolation[]): Promise<number> => {
+    console.log('🔄 Syncing', violations.length, 'violations to cloud');
+    if (violations.length === 0) return 0;
+
+    try {
+        const batch = writeBatch(db);
+        for (const violation of violations) {
+            const violationRef = doc(db, 'users', userId, 'violations', violation.id);
+            const cleaned: Record<string, any> = {};
+            for (const [key, value] of Object.entries(violation)) {
+                if (value !== undefined) cleaned[key] = value;
+            }
+            batch.set(violationRef, cleaned, { merge: true });
+        }
+        await batch.commit();
+        console.log('✅ Violations synced:', violations.length);
+        return violations.length;
+    } catch (error) {
+        console.error('❌ Failed to sync violations:', error);
+        return 0;
+    }
+};
+
+export const downloadViolationsFromCloud = async (userId: string): Promise<CloudViolation[]> => {
+    console.log('📥 Downloading violations from cloud');
+    try {
+        const violationsRef = collection(db, 'users', userId, 'violations');
+        const snapshot = await getDocs(violationsRef);
+        console.log('✅ Downloaded', snapshot.docs.length, 'violations');
+        return snapshot.docs.map(doc => doc.data() as CloudViolation);
+    } catch (error) {
+        console.error('❌ Failed to download violations:', error);
+        return [];
+    }
+};
+
+// ============================================
+// SCREENSHOT STORAGE (Firebase Storage)
+// ============================================
+
+export const uploadScreenshotToStorage = async (
+    userId: string,
+    entryId: string,
+    screenshotBase64: string,
+    index: number
+): Promise<string | null> => {
+    try {
+        // Create a unique path for the screenshot
+        const screenshotRef = ref(storage, `users/${userId}/screenshots/${entryId}_${index}.jpg`);
+
+        // Upload the base64 string (data URL format)
+        await uploadString(screenshotRef, screenshotBase64, 'data_url');
+
+        // Get the download URL
+        const downloadURL = await getDownloadURL(screenshotRef);
+        console.log('📸 Screenshot uploaded:', downloadURL);
+        return downloadURL;
+    } catch (error) {
+        console.error('❌ Failed to upload screenshot:', error);
+        return null;
+    }
+};
+
+export const uploadEntryScreenshots = async (
+    userId: string,
+    entryId: string,
+    screenshotString: string | null
+): Promise<string[]> => {
+    if (!screenshotString) return [];
+
+    const screenshots = screenshotString.split('|||').filter(s => s.startsWith('data:image'));
+    const uploadedUrls: string[] = [];
+
+    console.log(`📸 Uploading ${screenshots.length} screenshots for entry ${entryId}`);
+
+    for (let i = 0; i < screenshots.length; i++) {
+        const url = await uploadScreenshotToStorage(userId, entryId, screenshots[i], i);
+        if (url) {
+            uploadedUrls.push(url);
+        }
+    }
+
+    return uploadedUrls;
+};
+
+export const syncScreenshotsToCloud = async (
+    userId: string,
+    entries: Array<{ id: string; screenshot: string | null }>
+): Promise<number> => {
+    console.log('🔄 Syncing screenshots to Firebase Storage');
+    let totalUploaded = 0;
+
+    for (const entry of entries) {
+        if (entry.screenshot) {
+            const urls = await uploadEntryScreenshots(userId, entry.id, entry.screenshot);
+
+            // Store the URLs in Firestore for quick access
+            if (urls.length > 0) {
+                const entryRef = doc(db, 'users', userId, 'entries', entry.id);
+                await setDoc(entryRef, { screenshotUrls: urls }, { merge: true });
+                totalUploaded += urls.length;
+            }
+        }
+    }
+
+    console.log('✅ Screenshots synced:', totalUploaded);
+    return totalUploaded;
 };

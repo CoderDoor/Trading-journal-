@@ -152,17 +152,22 @@ export default function HomePage() {
     }, []);
 
     // Simple local save - fast and reliable
-    const handleSubmit = useCallback(async () => {
+    const handleSubmit = useCallback(async (brokenRuleIds: string[] = []) => {
         setIsSubmitting(true);
         try {
             const response = await fetch('/api/journal', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData),
+                body: JSON.stringify({ ...formData, brokenRuleIds }),
             });
 
             if (response.ok) {
-                console.log('[SUCCESS] Entry saved locally');
+                const data = await response.json();
+                if (data.violationsCount > 0) {
+                    console.log(`[SUCCESS] Entry saved with ${data.violationsCount} violation(s)`);
+                } else {
+                    console.log('[SUCCESS] Entry saved locally');
+                }
                 setIsSubmitting(false);
                 setSubmitSuccess(true);
             } else {

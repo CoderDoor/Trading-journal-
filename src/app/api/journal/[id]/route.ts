@@ -60,6 +60,7 @@ export async function PUT(
                 whatWentWell: body.whatWentWell,
                 whatWentWrong: body.whatWentWrong,
                 improvement: body.improvement,
+                screenshot: body.screenshot,
             },
         });
 

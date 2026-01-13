@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { JournalEntry } from '@/types/journal';
+import { ScreenshotUpload } from '@/components/ScreenshotUpload';
 
 // SVG Icons
 const TrashIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>;
@@ -126,6 +127,7 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
     const [formData, setFormData] = useState({
         instrument: '', tradeType: '', timeframe: '', entryPrice: '', stopLoss: '', target: '',
         outcome: '', tradeReason: '', whatWentWell: '', whatWentWrong: '', improvement: '',
+        screenshot: '',
     });
 
     useEffect(() => {
@@ -135,6 +137,7 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                 entryPrice: entry.entryPrice?.toString() || '', stopLoss: entry.stopLoss?.toString() || '',
                 target: entry.target?.toString() || '', outcome: entry.outcome || '', tradeReason: entry.tradeReason || '',
                 whatWentWell: entry.whatWentWell || '', whatWentWrong: entry.whatWentWrong || '', improvement: entry.improvement || '',
+                screenshot: entry.screenshot || '',
             });
         }
     }, [entry]);
@@ -177,9 +180,21 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                 overflowY: 'auto',
                 boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
             }} onClick={(e) => e.stopPropagation()}>
-                <h3 style={{ marginBottom: '1.5rem', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <h3 style={{ marginBottom: '0.5rem', fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <EditIcon /> Edit Trade Entry
                 </h3>
+                {entry?.updatedAt && (
+                    <p style={{
+                        fontSize: '0.75rem',
+                        color: 'var(--color-text-muted)',
+                        marginBottom: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                    }}>
+                        <ClockIcon /> Last edited: {new Date(entry.updatedAt).toLocaleString()}
+                    </p>
+                )}
                 <form onSubmit={(e) => {
                     e.preventDefault();
                     onSave({
@@ -194,6 +209,7 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                         entryPrice: formData.entryPrice ? parseFloat(formData.entryPrice) : null,
                         stopLoss: formData.stopLoss ? parseFloat(formData.stopLoss) : null,
                         target: formData.target ? parseFloat(formData.target) : null,
+                        screenshot: formData.screenshot || null,
                     });
                 }}>
                     {/* Trade Details Grid */}
@@ -251,9 +267,21 @@ function EditModal({ isOpen, onClose, entry, onSave }: {
                             <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.whatWentWrong} onChange={(e) => setFormData({ ...formData, whatWentWrong: e.target.value })} />
                         </div>
                     </div>
-                    <div style={{ marginBottom: '1.5rem' }}>
+                    <div style={{ marginBottom: '1.25rem' }}>
                         <label style={{ ...labelStyle, color: 'var(--color-accent)' }}>Improvement</label>
                         <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={formData.improvement} onChange={(e) => setFormData({ ...formData, improvement: e.target.value })} placeholder="What will you do better next time?" />
+                    </div>
+
+                    {/* Screenshot Upload Section */}
+                    <div style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                            <ImageIcon /> Trade Screenshots
+                        </label>
+                        <ScreenshotUpload
+                            screenshots={formData.screenshot ? formData.screenshot.split('|||') : []}
+                            onChange={(screenshots) => setFormData({ ...formData, screenshot: screenshots.join('|||') })}
+                            maxFiles={5}
+                        />
                     </div>
 
                     {/* Buttons */}

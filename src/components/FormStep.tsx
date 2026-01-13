@@ -1,13 +1,22 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { JournalFormData } from '@/types/journal';
 import { VoiceTextInput } from './VoiceTextInput';
 import { ScreenshotUpload } from './ScreenshotUpload';
 
+interface TradingRule {
+    id: string;
+    name: string;
+    description: string | null;
+    severity: string;
+    category: string;
+}
+
 interface FormStepProps {
     formData: JournalFormData;
     onInputChange: (field: keyof JournalFormData, value: string | boolean) => void;
-    onSubmit: () => void;
+    onSubmit: (brokenRuleIds: string[]) => void;
     onBack?: () => void;
     onReset: () => void;
     isSubmitting: boolean;
@@ -250,7 +259,49 @@ const CheckboxChip = ({ label, icon, checked, onClick }: {
     </button>
 );
 
+// Warning Icon for Rules Violated section
+const WarningIcon = () => (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+        <line x1="12" y1="9" x2="12" y2="13" />
+        <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+);
+
 export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, isSubmitting, isVoiceSupported = true }: FormStepProps) {
+    const [rules, setRules] = useState<TradingRule[]>([]);
+    const [brokenRules, setBrokenRules] = useState<Set<string>>(new Set());
+
+    // Fetch rules on mount
+    useEffect(() => {
+        const fetchRules = async () => {
+            try {
+                const res = await fetch('/api/rulebook');
+                const data = await res.json();
+                setRules(data.rules || []);
+            } catch (error) {
+                console.error('Failed to fetch rules:', error);
+            }
+        };
+        fetchRules();
+    }, []);
+
+    const toggleRule = (ruleId: string) => {
+        setBrokenRules(prev => {
+            const next = new Set(prev);
+            if (next.has(ruleId)) {
+                next.delete(ruleId);
+            } else {
+                next.add(ruleId);
+            }
+            return next;
+        });
+    };
+
+    const handleSubmit = () => {
+        onSubmit(Array.from(brokenRules));
+    };
+
     return (
         <div className="premium-form-step">
             {/* Header */}
@@ -464,6 +515,101 @@ export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, i
                     value={formData.improvement} onChange={(val) => onInputChange('improvement', val)} isVoiceSupported={isVoiceSupported} />
             </PremiumCard>
 
+            {/* Rules Violated Section - Only show if user has rules */}
+            {rules.length > 0 && (
+                <PremiumCard title="Rules Violated (Check if broken)" icon={<WarningIcon />}>
+                    <p style={{
+                        fontSize: '0.85rem',
+                        color: 'var(--color-text-muted)',
+                        marginBottom: '1rem',
+                        marginTop: '-0.5rem'
+                    }}>
+                        ⚠️ Check the rules you violated during this trade. Punishments will be assigned.
+                    </p>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
+                        {rules.map(rule => {
+                            const isChecked = brokenRules.has(rule.id);
+                            const severityColor =
+                                rule.severity === 'CRITICAL' ? '#dc2626' :
+                                    rule.severity === 'HIGH' ? '#ef4444' :
+                                        rule.severity === 'MEDIUM' ? '#f59e0b' : '#10b981';
+                            return (
+                                <button
+                                    key={rule.id}
+                                    type="button"
+                                    onClick={() => toggleRule(rule.id)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.875rem 1rem',
+                                        background: isChecked
+                                            ? 'rgba(239, 68, 68, 0.15)'
+                                            : 'var(--color-bg-tertiary)',
+                                        border: isChecked
+                                            ? '2px solid #ef4444'
+                                            : '1px solid var(--color-border)',
+                                        borderRadius: '12px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s ease',
+                                        textAlign: 'left',
+                                    }}
+                                >
+                                    <span style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '4px',
+                                        border: isChecked ? '2px solid #ef4444' : '2px solid var(--color-border)',
+                                        background: isChecked ? '#ef4444' : 'transparent',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'white',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 700,
+                                        flexShrink: 0,
+                                    }}>
+                                        {isChecked && '✓'}
+                                    </span>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{
+                                            fontWeight: 600,
+                                            fontSize: '0.9rem',
+                                            color: isChecked ? '#ef4444' : 'var(--color-text)',
+                                        }}>
+                                            {rule.name}
+                                        </div>
+                                        <span style={{
+                                            fontSize: '0.7rem',
+                                            padding: '0.15rem 0.5rem',
+                                            background: `${severityColor}20`,
+                                            color: severityColor,
+                                            borderRadius: '4px',
+                                            fontWeight: 600,
+                                        }}>
+                                            {rule.severity}
+                                        </span>
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    {brokenRules.size > 0 && (
+                        <div style={{
+                            marginTop: '1rem',
+                            padding: '0.75rem 1rem',
+                            background: 'rgba(239, 68, 68, 0.1)',
+                            border: '1px solid rgba(239, 68, 68, 0.3)',
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            color: '#ef4444',
+                        }}>
+                            ⚠️ You will receive {brokenRules.size} punishment{brokenRules.size > 1 ? 's' : ''} for these violations.
+                        </div>
+                    )}
+                </PremiumCard>
+            )}
+
             {/* Screenshot Upload - Drag & Drop with Multiple Files */}
             <PremiumCard title="Trade Screenshots" icon={<CameraIcon />}>
                 <ScreenshotUpload
@@ -476,7 +622,7 @@ export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, i
             {/* Submit Button */}
             <div style={{ display: 'flex', justifyContent: 'center', marginTop: '2rem' }}>
                 <button
-                    onClick={onSubmit}
+                    onClick={handleSubmit}
                     disabled={isSubmitting}
                     style={{
                         display: 'flex',

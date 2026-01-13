@@ -7,7 +7,14 @@ import {
     onAuthChange,
     syncEntriesToCloud,
     downloadEntriesFromCloud,
-    CloudEntry
+    syncRulesToCloud,
+    downloadRulesFromCloud,
+    syncViolationsToCloud,
+    downloadViolationsFromCloud,
+    syncScreenshotsToCloud,
+    CloudEntry,
+    CloudRule,
+    CloudViolation
 } from '@/lib/firebase';
 import { User } from 'firebase/auth';
 
@@ -17,6 +24,10 @@ export default function SyncPage() {
     const [syncing, setSyncing] = useState(false);
     const [localCount, setLocalCount] = useState(0);
     const [cloudCount, setCloudCount] = useState(0);
+    const [localRulesCount, setLocalRulesCount] = useState(0);
+    const [cloudRulesCount, setCloudRulesCount] = useState(0);
+    const [localViolationsCount, setLocalViolationsCount] = useState(0);
+    const [cloudViolationsCount, setCloudViolationsCount] = useState(0);
     const [message, setMessage] = useState('');
     const [lastSync, setLastSync] = useState<string | null>(null);
 
@@ -35,6 +46,7 @@ export default function SyncPage() {
     }, []);
 
     const loadCounts = async (userId: string) => {
+        // Load local entries
         try {
             const res = await fetch('/api/journal');
             const data = await res.json();
@@ -43,11 +55,34 @@ export default function SyncPage() {
             console.error('Error loading local entries:', e);
         }
 
+        // Load local rules
+        try {
+            const res = await fetch('/api/rulebook');
+            const data = await res.json();
+            setLocalRulesCount(data.rules?.length || 0);
+        } catch (e) {
+            console.error('Error loading local rules:', e);
+        }
+
+        // Load local violations
+        try {
+            const res = await fetch('/api/violations');
+            const data = await res.json();
+            setLocalViolationsCount(data.violations?.length || 0);
+        } catch (e) {
+            console.error('Error loading local violations:', e);
+        }
+
+        // Load cloud counts
         try {
             const entries = await downloadEntriesFromCloud(userId);
             setCloudCount(entries.length);
+            const rules = await downloadRulesFromCloud(userId);
+            setCloudRulesCount(rules.length);
+            const violations = await downloadViolationsFromCloud(userId);
+            setCloudViolationsCount(violations.length);
         } catch (e) {
-            console.error('Error loading cloud entries:', e);
+            console.error('Error loading cloud data:', e);
         }
     };
 
@@ -71,11 +106,12 @@ export default function SyncPage() {
         setMessage('');
 
         try {
+            // Sync Journal Entries
             const res = await fetch('/api/journal');
             const data = await res.json();
             const localEntries = data.entries || [];
 
-            const uploaded = await syncEntriesToCloud(
+            const uploadedEntries = await syncEntriesToCloud(
                 user.uid,
                 localEntries.map((e: any) => ({
                     id: e.id,
@@ -108,12 +144,65 @@ export default function SyncPage() {
                     whatWentWrong: e.whatWentWrong,
                     improvement: e.improvement,
                     rawTranscript: e.rawTranscript,
+                    // Note: Screenshots excluded from cloud sync (too large for Firestore 1MB limit)
                     createdAt: e.createdAt,
                     updatedAt: e.updatedAt,
                 }))
             );
 
-            const cloudEntries = await downloadEntriesFromCloud(user.uid);
+            // Sync Rules
+            const rulesRes = await fetch('/api/rulebook');
+            const rulesData = await rulesRes.json();
+            const localRules = rulesData.rules || [];
+
+            const uploadedRules = await syncRulesToCloud(
+                user.uid,
+                localRules.map((r: any) => ({
+                    id: r.id,
+                    name: r.name,
+                    description: r.description,
+                    category: r.category,
+                    condition: r.condition,
+                    severity: r.severity,
+                    isActive: r.isActive,
+                    createdAt: r.createdAt,
+                    updatedAt: r.updatedAt,
+                }))
+            );
+
+            // Sync Violations
+            const violationsRes = await fetch('/api/violations');
+            const violationsData = await violationsRes.json();
+            const localViolations = violationsData.violations || [];
+
+            const uploadedViolations = await syncViolationsToCloud(
+                user.uid,
+                localViolations.map((v: any) => ({
+                    id: v.id,
+                    ruleId: v.ruleId,
+                    ruleName: v.ruleName,
+                    journalEntryId: v.journalEntryId,
+                    punishment: v.punishment,
+                    punishmentType: v.punishmentType,
+                    severity: v.severity,
+                    status: v.status,
+                    completedAt: v.completedAt,
+                    dueDate: v.dueDate,
+                    notes: v.notes,
+                    createdAt: v.createdAt,
+                }))
+            );
+
+            // NOTE: Screenshot sync requires CORS configuration on Firebase Storage bucket
+            // To enable: Create cors.json and run: gsutil cors set cors.json gs://trading-journal-21e69.firebasestorage.app
+            // For now, screenshots are stored locally only
+            /*
+            setMessage('📸 Uploading screenshots to cloud storage...');
+            const entriesWithScreenshots = localEntries
+                .filter((e: any) => e.screenshot)
+                .map((e: any) => ({ id: e.id, screenshot: e.screenshot }));
+            const uploadedScreenshots = await syncScreenshotsToCloud(user.uid, entriesWithScreenshots);
+            */
 
             // Save last sync time
             const syncTime = new Date().toLocaleString();
@@ -121,7 +210,7 @@ export default function SyncPage() {
             localStorage.setItem('lastSyncTime', syncTime);
 
             await loadCounts(user.uid);
-            setMessage(`✅ Synced successfully! ${uploaded} entries uploaded to cloud.`);
+            setMessage(`✅ Synced! ${uploadedEntries} trades, ${uploadedRules} rules, ${uploadedViolations} violations.`);
         } catch (e) {
             console.error('Sync error:', e);
             setMessage('❌ Sync failed. Please try again.');
@@ -284,28 +373,28 @@ export default function SyncPage() {
                 <>
                     {/* Stats Cards */}
                     <div className="grid grid-3" style={{ marginBottom: '1.5rem' }}>
-                        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--color-accent)' }}>
-                                {localCount}
+                        <div className="card" style={{ textAlign: 'center', padding: '1.25rem' }}>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--color-accent)' }}>
+                                {localCount} / {cloudCount}
                             </div>
-                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                                💻 Local Entries
-                            </div>
-                        </div>
-                        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: '700', color: 'var(--color-profit)' }}>
-                                {cloudCount}
-                            </div>
-                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                                ☁️ Cloud Entries
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                📊 Trades (Local / Cloud)
                             </div>
                         </div>
-                        <div className="card" style={{ textAlign: 'center', padding: '1.5rem' }}>
-                            <div style={{ fontSize: '2.5rem', fontWeight: '700', color: localCount === cloudCount ? 'var(--color-profit)' : 'var(--color-neutral)' }}>
-                                {localCount === cloudCount ? '✓' : '⟳'}
+                        <div className="card" style={{ textAlign: 'center', padding: '1.25rem' }}>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--color-profit)' }}>
+                                {localRulesCount} / {cloudRulesCount}
                             </div>
-                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>
-                                {localCount === cloudCount ? 'In Sync' : 'Needs Sync'}
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                📋 Rules (Local / Cloud)
+                            </div>
+                        </div>
+                        <div className="card" style={{ textAlign: 'center', padding: '1.25rem' }}>
+                            <div style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--color-loss)' }}>
+                                {localViolationsCount} / {cloudViolationsCount}
+                            </div>
+                            <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                                ⚠️ Violations (Local / Cloud)
                             </div>
                         </div>
                     </div>

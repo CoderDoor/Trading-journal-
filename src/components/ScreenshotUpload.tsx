@@ -18,15 +18,23 @@ export function ScreenshotUpload({ screenshots, onChange, maxFiles = 5 }: Screen
         const remainingSlots = maxFiles - screenshots.length;
         const filesToProcess = Array.from(files).slice(0, remainingSlots);
 
-        filesToProcess.forEach(file => {
-            if (!file.type.startsWith('image/')) return;
+        // Process all files and collect their base64 results before updating state
+        const promises = filesToProcess
+            .filter(file => file.type.startsWith('image/'))
+            .map(file => {
+                return new Promise<string>((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        resolve(e.target?.result as string);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64 = e.target?.result as string;
-                onChange([...screenshots, base64]);
-            };
-            reader.readAsDataURL(file);
+        Promise.all(promises).then(newScreenshots => {
+            if (newScreenshots.length > 0) {
+                onChange([...screenshots, ...newScreenshots]);
+            }
         });
     }, [screenshots, onChange, maxFiles]);
 

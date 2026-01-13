@@ -41,6 +41,7 @@ interface JournalEntryInput {
     screenshot?: string;
     rawTranscript?: string;
     tags?: string[];
+    brokenRuleIds?: string[]; // Manually selected rule violations
 }
 
 // Validation helper
@@ -140,6 +141,57 @@ export async function GET(request: NextRequest) {
     }
 }
 
+// Punishment templates based on severity
+const PUNISHMENTS = {
+    LOW: [
+        { type: 'WRITING', task: 'Write 3 reasons why this rule exists and how it protects your capital' },
+        { type: 'REVIEW', task: 'Review your last winning trade and document what you did right' },
+    ],
+    MEDIUM: [
+        { type: 'NO_TRADING', task: 'No live trading for 24 hours - use this time to study your rules' },
+        { type: 'REVIEW', task: 'Review 5 past trades and identify similar mistakes' },
+    ],
+    HIGH: [
+        { type: 'PAPER_TRADE', task: 'Paper trade only for 3 days before resuming live trading' },
+        { type: 'WRITING', task: 'Write a detailed journal entry about this mistake and your action plan' },
+    ],
+    CRITICAL: [
+        { type: 'NO_TRADING', task: 'No trading for 1 week - complete strategy review required' },
+        { type: 'REVIEW', task: 'Create a full strategy review document with updated rules' },
+    ],
+};
+
+function getPunishment(severity: string) {
+    const list = PUNISHMENTS[severity as keyof typeof PUNISHMENTS] || PUNISHMENTS.MEDIUM;
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+// Check if a rule is violated by the trade data
+function checkRuleViolation(rule: any, tradeData: JournalEntryInput): boolean {
+    try {
+        const condition = JSON.parse(rule.condition || '{}');
+        const { field, operator, value } = condition;
+
+        if (!field || !operator) return false;
+
+        const tradeValue = (tradeData as any)[field];
+
+        switch (operator) {
+            case 'eq': return tradeValue === value;
+            case 'neq': return tradeValue !== value;
+            case 'lt': return typeof tradeValue === 'number' && tradeValue < value;
+            case 'lte': return typeof tradeValue === 'number' && tradeValue <= value;
+            case 'gt': return typeof tradeValue === 'number' && tradeValue > value;
+            case 'gte': return typeof tradeValue === 'number' && tradeValue >= value;
+            case 'is_false': return tradeValue === false;
+            case 'is_true': return tradeValue === true;
+            default: return false;
+        }
+    } catch {
+        return false;
+    }
+}
+
 // POST - Create new journal entry
 export async function POST(request: NextRequest) {
     try {
@@ -189,7 +241,40 @@ export async function POST(request: NextRequest) {
             },
         });
 
-        return NextResponse.json(entry, { status: 201 });
+        // Create violations for manually selected broken rules
+        const violations: any[] = [];
+        try {
+            if (body.brokenRuleIds && body.brokenRuleIds.length > 0) {
+                // Get the rules that user marked as broken
+                const brokenRules = await (prisma as any).tradingRule.findMany({
+                    where: { id: { in: body.brokenRuleIds } },
+                });
+
+                for (const rule of brokenRules) {
+                    const punishment = getPunishment(rule.severity);
+                    const violation = await (prisma as any).ruleViolation.create({
+                        data: {
+                            ruleId: rule.id,
+                            ruleName: rule.name,
+                            journalEntryId: entry.id,
+                            punishment: punishment.task,
+                            punishmentType: punishment.type,
+                            severity: rule.severity,
+                            status: 'PENDING',
+                        },
+                    });
+                    violations.push(violation);
+                }
+            }
+        } catch (ruleError) {
+            console.error('Rule violation creation failed (non-critical):', ruleError);
+        }
+
+        return NextResponse.json({
+            entry,
+            violations,
+            violationsCount: violations.length
+        }, { status: 201 });
     } catch (error) {
         console.error('Failed to create journal entry:', error);
         return NextResponse.json(
