@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "43057549948",
+    "project_id": "trading-journal-21e69",
+    "storage_bucket": "trading-journal-21e69.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:43057549948:android:1fa7bdf2579ad0c1de2ff9",
+        "android_client_info": {
+          "package_name": "com.tradingjournal.voice_trading_journal_flutter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "43057549948-0k1hlv1goqt1e3dg77vjgnuaev3e5jkd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA0hchjCl42bO7HojjGOdGTHpIbzPZoWrE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "43057549948-0k1hlv1goqt1e3dg77vjgnuaev3e5jkd.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

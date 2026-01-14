@@ -20,45 +20,46 @@ export default function AIReviewPage() {
             .catch(() => setLoading(false));
     }, []);
 
-    const analyzeAllTrades = () => {
+    const analyzeAllTrades = async () => {
         if (entries.length === 0) return;
         setAnalyzing(true);
+        setReview(null);
 
-        const wins = entries.filter(e => e.outcome === 'WIN').length;
-        const losses = entries.filter(e => e.outcome === 'LOSS').length;
-        const winRate = entries.length > 0 ? Math.round((wins / entries.length) * 100) : 0;
+        try {
+            const response = await fetch('/api/ai-analyze', { method: 'POST' });
+            const data = await response.json();
 
-        const instruments: Record<string, number> = {};
-        entries.forEach(e => { if (e.instrument) instruments[e.instrument] = (instruments[e.instrument] || 0) + 1; });
-        const topInstruments = Object.entries(instruments).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            if (data.error && !data.patterns) {
+                setReview(`## ⚠️ ${data.error}\n\nAdd more trades to get personalized AI insights.`);
+            } else {
+                setReview(`## 🤖 AI Analysis of Your ${data.totalTrades || entries.length} Trades
 
-        const strategies: Record<string, number> = {};
-        entries.forEach(e => { if (e.strategyLogic) strategies[e.strategyLogic] = (strategies[e.strategyLogic] || 0) + 1; });
-        const topStrategies = Object.entries(strategies).sort((a, b) => b[1] - a[1]).slice(0, 3);
+### 📊 Win Rate: ${data.winRate}%
+${data.summary || ''}
 
-        setTimeout(() => {
-            setReview(`## 📊 AI Analysis of Your ${entries.length} Trades
+### 📈 Patterns Detected
+${data.patterns?.map((p: string) => `- ${p}`).join('\n') || '- No patterns detected yet'}
 
-### Performance Summary
-- **Win Rate:** ${winRate}% (${wins} wins, ${losses} losses)
-- **Total Trades:** ${entries.length}
-${winRate >= 50 ? '✅ Your win rate is above 50% - Keep it up!' : '⚠️ Work on improving your win rate'}
+### ✅ Your Strengths
+${data.strengths?.map((s: string) => `- ${s}`).join('\n') || '- Keep trading to find your strengths'}
 
-### Most Traded Instruments
-${topInstruments.map(([inst, count]) => `- **${inst}**: ${count} trades`).join('\n') || '- No data'}
+### ⚠️ Areas to Improve
+${data.weaknesses?.map((w: string) => `- ${w}`).join('\n') || '- No specific weaknesses identified'}
 
-### Strategies Used
-${topStrategies.map(([strat, count]) => `- **${strat}**: ${count} trades`).join('\n') || '- No strategies logged'}
+### 💡 Suggestions
+${data.suggestions?.map((s: string) => `- ${s}`).join('\n') || '- Continue building your trade history'}
 
-### Recommendations
-${winRate < 50 ? '1. Review your losing trades for common mistakes\n2. Consider reducing position size until win rate improves\n3. Focus on high-probability setups' : '1. Consider scaling up position size\n2. Document what makes your winning trades successful\n3. Keep maintaining your trading discipline'}
+### 🎯 Risk Management Score: ${data.riskScore || 5}/10
 
-### Areas to Improve
-- Always log your emotional state for better self-awareness
-- Add screenshots to visualize your setups
-- Review trades weekly for patterns`);
-            setAnalyzing(false);
-        }, 1500);
+---
+_Analysis generated: ${new Date().toLocaleString()}_`);
+            }
+        } catch (error) {
+            console.error('AI Analysis error:', error);
+            setReview('## ❌ Analysis Failed\n\nPlease try again. Make sure you have an internet connection.');
+        }
+
+        setAnalyzing(false);
     };
 
     const analyzeSingleTrade = (entry: JournalEntry) => {

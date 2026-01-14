@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { JournalEntry } from '@/types/journal';
 import { ScreenshotUpload } from '@/components/ScreenshotUpload';
+import dynamic from 'next/dynamic';
+
+const ShareableTradeCard = dynamic(() => import('@/components/ShareableTradeCard'), { ssr: false });
 
 // SVG Icons
 const TrashIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>;
@@ -342,8 +345,16 @@ export default function HistoryPage() {
 
     const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchEntries(); };
 
-    const handleExport = async (format: 'csv' | 'json') => {
-        window.open(`/api/export?format=${format}`, '_blank');
+    const handleExport = async (format: 'csv' | 'json' | 'pdf' | 'excel') => {
+        if (format === 'pdf') {
+            const { exportToPDF } = await import('@/lib/exportUtils');
+            exportToPDF(entries, `trade-history-${new Date().toISOString().split('T')[0]}`);
+        } else if (format === 'excel') {
+            const { exportToExcel } = await import('@/lib/exportUtils');
+            exportToExcel(entries, `trade-history-${new Date().toISOString().split('T')[0]}`);
+        } else {
+            window.open(`/api/export?format=${format}`, '_blank');
+        }
     };
 
     const handleDeleteClick = (entry: JournalEntry) => setDeleteModal({ isOpen: true, entry });
@@ -421,11 +432,17 @@ export default function HistoryPage() {
                 <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--color-text)' }}>
                     <BookIcon /> Journal History
                 </h1>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-primary" onClick={() => handleExport('csv')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <button className="btn" onClick={() => handleExport('pdf')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, #ef4444, #dc2626)', color: 'white' }}>
+                        📄 PDF
+                    </button>
+                    <button className="btn" onClick={() => handleExport('excel')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem', background: 'linear-gradient(135deg, #22c55e, #16a34a)', color: 'white' }}>
+                        📊 Excel
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => handleExport('csv')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <ChartIcon /> CSV
                     </button>
-                    <button className="btn btn-primary" onClick={() => handleExport('json')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <button className="btn btn-secondary" onClick={() => handleExport('json')} style={{ padding: '0.5rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                         <FileIcon /> JSON
                     </button>
                 </div>

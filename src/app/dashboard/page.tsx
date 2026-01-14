@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { JournalEntry } from '@/types/journal';
+import dynamic from 'next/dynamic';
+
+const PerformanceCharts = dynamic(() => import('@/components/PerformanceCharts'), { ssr: false });
 
 // SVG Icons for StatCard
 const ChartIcon = () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>;
@@ -300,6 +303,24 @@ export default function DashboardPage() {
                     </div>
                 )}
             </div>
+
+            {/* Performance Charts */}
+            {entries.length >= 2 && (
+                <div style={{ marginTop: '2rem' }}>
+                    <h2 style={{
+                        fontSize: '1.25rem',
+                        fontWeight: 700,
+                        marginBottom: '1.25rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        color: 'var(--color-text)'
+                    }}>
+                        📊 Performance Analytics
+                    </h2>
+                    <PerformanceCharts trades={entries} />
+                </div>
+            )}
         </div>
     );
 }
