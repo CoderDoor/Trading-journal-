@@ -268,11 +268,18 @@ const WarningIcon = () => (
     </svg>
 );
 
+interface TradingAccountOption {
+    id: string;
+    name: string;
+    accountType: string;
+}
+
 export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, isSubmitting, isVoiceSupported = true }: FormStepProps) {
     const [rules, setRules] = useState<TradingRule[]>([]);
     const [brokenRules, setBrokenRules] = useState<Set<string>>(new Set());
+    const [accounts, setAccounts] = useState<TradingAccountOption[]>([]);
 
-    // Fetch rules on mount
+    // Fetch rules and accounts on mount
     useEffect(() => {
         const fetchRules = async () => {
             try {
@@ -283,7 +290,17 @@ export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, i
                 console.error('Failed to fetch rules:', error);
             }
         };
+        const fetchAccounts = async () => {
+            try {
+                const res = await fetch('/api/accounts');
+                const data = await res.json();
+                setAccounts(data.accounts || []);
+            } catch (error) {
+                console.error('Failed to fetch accounts:', error);
+            }
+        };
         fetchRules();
+        fetchAccounts();
     }, []);
 
     const toggleRule = (ruleId: string) => {
@@ -362,7 +379,7 @@ export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, i
 
             {/* Trade Details */}
             <PremiumCard title="Trade Details" icon={<ChartIcon />}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                     <PremiumInput
                         label="Instrument"
                         placeholder="EURUSD, BTC, NIFTY..."
@@ -391,6 +408,15 @@ export function FormStep({ formData, onInputChange, onSubmit, onBack, onReset, i
                             { value: '1H', label: '1 Hour' },
                             { value: '4H', label: '4 Hours' },
                             { value: 'D', label: 'Daily' },
+                        ]}
+                    />
+                    <PremiumSelect
+                        label="Trading Account"
+                        value={formData.accountId}
+                        onChange={(e) => onInputChange('accountId', e.target.value)}
+                        options={[
+                            { value: '', label: 'No Account' },
+                            ...accounts.map(a => ({ value: a.id, label: `${a.accountType === 'PROP_FIRM' ? '🏢' : a.accountType === 'PERSONAL' ? '👤' : a.accountType === 'DEMO' ? '📝' : '🎯'} ${a.name}` }))
                         ]}
                     />
                 </div>

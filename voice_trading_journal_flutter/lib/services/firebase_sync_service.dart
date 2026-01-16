@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/journal_entry.dart';
 import '../models/trading_rule.dart';
+import '../models/trading_account.dart';
 
 class FirebaseSyncService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -24,6 +25,10 @@ class FirebaseSyncService {
 
   static CollectionReference<Map<String, dynamic>> _violationsCollection() {
     return _firestore.collection('users').doc(userId).collection('violations');
+  }
+
+  static CollectionReference<Map<String, dynamic>> _accountsCollection() {
+    return _firestore.collection('users').doc(userId).collection('accounts');
   }
 
   // Batch sync all local entries to cloud (fast!)
@@ -258,5 +263,63 @@ class FirebaseSyncService {
       'downloadedRules': cloudRules.length,
       'downloadedViolations': cloudViolations.length,
     };
+  }
+
+  // ==================== TRADING ACCOUNTS ====================
+
+  static Future<List<TradingAccount>> downloadAccounts() async {
+    if (userId == null) return [];
+
+    try {
+      final snapshot = await _accountsCollection().get();
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return TradingAccount.fromMap(data);
+      }).toList();
+    } catch (e) {
+      print('❌ Download accounts failed: $e');
+      return [];
+    }
+  }
+
+  static Future<int> uploadAccounts(List<TradingAccount> accounts) async {
+    if (userId == null || accounts.isEmpty) return 0;
+
+    try {
+      final batch = _firestore.batch();
+      for (var account in accounts) {
+        final docRef = _accountsCollection().doc(account.id);
+        batch.set(docRef, account.toMap(), SetOptions(merge: true));
+      }
+      await batch.commit();
+      print('✅ ${accounts.length} accounts synced to cloud');
+      return accounts.length;
+    } catch (e) {
+      print('❌ Accounts upload failed: $e');
+      return 0;
+    }
+  }
+
+  static Future<void> uploadAccount(TradingAccount account) async {
+    if (userId == null) return;
+
+    try {
+      await _accountsCollection().doc(account.id).set(account.toMap(), SetOptions(merge: true));
+      print('✅ Account ${account.name} synced to cloud');
+    } catch (e) {
+      print('❌ Account upload failed: $e');
+    }
+  }
+
+  static Future<void> deleteAccount(String accountId) async {
+    if (userId == null) return;
+
+    try {
+      await _accountsCollection().doc(accountId).delete();
+      print('🗑️ Account $accountId deleted from cloud');
+    } catch (e) {
+      print('❌ Account delete failed: $e');
+    }
   }
 }

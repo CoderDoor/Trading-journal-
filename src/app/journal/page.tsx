@@ -9,7 +9,7 @@ import { InputStep, FormStep } from '@/components';
 
 const initialFormData: JournalFormData = {
     instrument: '', tradeType: '', timeframe: '', entryPrice: '', stopLoss: '', target: '',
-    riskReward: '', outcome: '', tradeReason: '', strategyLogic: '',
+    riskReward: '', outcome: '', tradeReason: '', strategyLogic: '', accountId: '',
     htfBiasAligned: false, liquidityTaken: false, entryAtPOI: false, riskManaged: false,
     bosConfirmed: false, mssConfirmed: false, chochConfirmed: false,
     orderBlockEntry: false, fvgEntry: false, killZoneEntry: false,

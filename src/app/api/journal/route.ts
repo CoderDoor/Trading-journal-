@@ -42,6 +42,7 @@ interface JournalEntryInput {
     rawTranscript?: string;
     tags?: string[];
     brokenRuleIds?: string[]; // Manually selected rule violations
+    accountId?: string;
 }
 
 // Validation helper
@@ -76,6 +77,7 @@ export async function GET(request: NextRequest) {
         const timeframe = searchParams.get('timeframe');
         const emotionState = searchParams.get('emotionState');
         const tags = searchParams.get('tags');
+        const accountId = searchParams.get('accountId');
 
         // Pagination params
         const cursor = searchParams.get('cursor');
@@ -111,6 +113,7 @@ export async function GET(request: NextRequest) {
         const extendedWhere: Record<string, unknown> = { ...where };
         if (timeframe) extendedWhere.timeframe = timeframe;
         if (emotionState) extendedWhere.emotionState = emotionState;
+        if (accountId) extendedWhere.accountId = accountId;
 
         const entries = await prisma.journalEntry.findMany({
             where: extendedWhere,
@@ -218,6 +221,7 @@ export async function POST(request: NextRequest) {
                 outcome: body.outcome || null,
                 tradeReason: body.tradeReason || null,
                 strategyLogic: body.strategyLogic || null,
+                accountId: body.accountId || null,
                 htfBiasAligned: Boolean(body.htfBiasAligned),
                 liquidityTaken: Boolean(body.liquidityTaken),
                 entryAtPOI: Boolean(body.entryAtPOI),

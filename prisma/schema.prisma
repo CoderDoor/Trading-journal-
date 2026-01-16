@@ -76,6 +76,9 @@ model JournalEntry {
   simulatedExitTime  DateTime?
   simulatedPnL       Float?
 
+  // Trading Account reference
+  accountId       String?
+
   // Performance indexes for faster queries
   @@index([createdAt])
   @@index([instrument])
@@ -84,6 +87,24 @@ model JournalEntry {
   @@index([emotionState])
   @@index([isBacktest])
   @@index([backtestSessionId])
+  @@index([accountId])
+}
+
+// Trading Accounts for multi-account support (Personal, Prop Firm, Demo)
+model TradingAccount {
+  id          String   @id @default(uuid())
+  name        String   // e.g., "FTMO $100K", "Personal IC Markets"
+  broker      String?  // e.g., "FTMO", "IC Markets", "XM"
+  accountType String   // PERSONAL, PROP_FIRM, DEMO, CHALLENGE
+  accountSize Float?   // Initial account size
+  currency    String   @default("USD") // Account currency
+  status      String   @default("ACTIVE") // ACTIVE, PASSED, FAILED, INACTIVE
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([accountType])
+  @@index([status])
 }
 
 // Custom Tags model for user-defined tags

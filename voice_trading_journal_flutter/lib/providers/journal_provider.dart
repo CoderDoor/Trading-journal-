@@ -21,18 +21,23 @@ class JournalProvider extends ChangeNotifier {
     String? outcome,
     String? timeframe,
     String? emotionState,
+    String? accountId,
   }) async {
     _loading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _entries = await DatabaseService.getEntries(
-        search: search,
-        outcome: outcome,
-        timeframe: timeframe,
-        emotionState: emotionState,
-      );
+      if (accountId != null && accountId.isNotEmpty) {
+        _entries = await DatabaseService.getEntriesByAccount(accountId);
+      } else {
+        _entries = await DatabaseService.getEntries(
+          search: search,
+          outcome: outcome,
+          timeframe: timeframe,
+          emotionState: emotionState,
+        );
+      }
     } catch (e) {
       _error = e.toString();
     }

@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/journal_provider.dart';
 import '../providers/theme_provider.dart';
+import '../services/notification_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -103,6 +104,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
+                  // Notification Reminder Settings
+                  _ReminderSettingsCard(),
+
                   const SizedBox(height: 24),
 
                   // App Info
@@ -122,7 +128,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Voice Trading Journal', style: TextStyle(fontWeight: FontWeight.w600)),
+                                const Text('TrackEdge', style: TextStyle(fontWeight: FontWeight.w600)),
                                 Text('Version 1.0.0', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
                               ],
                             ),
@@ -366,6 +372,122 @@ class _ProfileScreenState extends State<ProfileScreen> {
               label: Text(auth.syncing ? 'Syncing...' : 'Sync Now'),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// Reminder Settings Card Widget
+class _ReminderSettingsCard extends StatefulWidget {
+  @override
+  State<_ReminderSettingsCard> createState() => _ReminderSettingsCardState();
+}
+
+class _ReminderSettingsCardState extends State<_ReminderSettingsCard> {
+  bool _enabled = false;
+  TimeOfDay _reminderTime = const TimeOfDay(hour: 17, minute: 0);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final enabled = await NotificationService.isReminderEnabled();
+    final time = await NotificationService.getReminderTime();
+    if (mounted) {
+      setState(() {
+        _enabled = enabled;
+        _reminderTime = TimeOfDay(hour: time.hour, minute: time.minute);
+      });
+    }
+  }
+
+  Future<void> _toggle(bool value) async {
+    if (value) {
+      final granted = await NotificationService.requestPermissions();
+      if (!granted) return;
+      await NotificationService.scheduleDailyReminder(_reminderTime.hour, _reminderTime.minute);
+      await NotificationService.showTestNotification();
+    } else {
+      await NotificationService.cancelReminders();
+    }
+    setState(() => _enabled = value);
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _reminderTime,
+    );
+    if (picked != null) {
+      setState(() => _reminderTime = picked);
+      if (_enabled) {
+        await NotificationService.scheduleDailyReminder(picked.hour, picked.minute);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgTertiary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(Icons.notifications_active_outlined, color: AppTheme.accent),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Daily Reminder', style: TextStyle(fontWeight: FontWeight.w500)),
+                    Text(
+                      _enabled ? 'Reminds you at ${_reminderTime.format(context)}' : 'Get reminded to journal',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _enabled,
+                onChanged: _toggle,
+                activeColor: AppTheme.accent,
+              ),
+            ],
+          ),
+          if (_enabled) ...[
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _pickTime,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppTheme.bgSecondary,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Reminder Time'),
+                    Text(
+                      _reminderTime.format(context),
+                      style: TextStyle(color: AppTheme.accent, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

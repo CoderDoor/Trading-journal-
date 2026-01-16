@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../services/firebase_sync_service.dart';
 import '../services/database_service.dart';
 import '../models/journal_entry.dart';
+import '../models/trading_account.dart';
 
 class AuthProvider extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -81,6 +82,7 @@ class AuthProvider extends ChangeNotifier {
       // Get local data
       final localEntries = await DatabaseService.getEntries(limit: 1000);
       final localTemplates = await DatabaseService.getTemplates();
+      final localAccounts = await DatabaseService.getAccounts();
 
       // Upload to cloud
       final results = await FirebaseSyncService.fullSync(
@@ -88,9 +90,13 @@ class AuthProvider extends ChangeNotifier {
         localTemplates: localTemplates,
       );
 
+      // Upload accounts to cloud
+      await FirebaseSyncService.uploadAccounts(localAccounts);
+
       // Download cloud data and merge
       final cloudEntries = await FirebaseSyncService.downloadEntries();
       final cloudTemplates = await FirebaseSyncService.downloadTemplates();
+      final cloudAccounts = await FirebaseSyncService.downloadAccounts();
 
       // Merge cloud entries to local - use REPLACE to overwrite local with cloud data
       print('📥 Merging ${cloudEntries.length} cloud entries to local...');
@@ -103,6 +109,13 @@ class AuthProvider extends ChangeNotifier {
       // Merge cloud templates - update or create
       for (var template in cloudTemplates) {
         await DatabaseService.createTemplateWithId(template);
+      }
+
+      // Merge cloud accounts - update or create
+      print('📥 Merging ${cloudAccounts.length} cloud accounts to local...');
+      for (var account in cloudAccounts) {
+        await DatabaseService.createAccountWithId(account);
+        print('  ✅ Merged account: ${account.name}');
       }
 
       _syncing = false;
@@ -126,5 +139,17 @@ class AuthProvider extends ChangeNotifier {
   Future<void> deleteEntryFromCloud(String entryId) async {
     if (!isLoggedIn) return;
     await FirebaseSyncService.deleteEntry(entryId);
+  }
+
+  // Upload single account to cloud
+  Future<void> uploadAccount(TradingAccount account) async {
+    if (!isLoggedIn) return;
+    await FirebaseSyncService.uploadAccount(account);
+  }
+
+  // Delete account from cloud
+  Future<void> deleteAccountFromCloud(String accountId) async {
+    if (!isLoggedIn) return;
+    await FirebaseSyncService.deleteAccount(accountId);
   }
 }

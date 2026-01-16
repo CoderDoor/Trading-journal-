@@ -320,8 +320,13 @@ export default function HistoryPage() {
     const [editModal, setEditModal] = useState<{ isOpen: boolean; entry: JournalEntry | null }>({ isOpen: false, entry: null });
     const [lightbox, setLightbox] = useState<{ images: string[]; index: number }>({ images: [], index: -1 });
     const [activeTab, setActiveTab] = useState<'live' | 'backtest'>('live');
+    const [accounts, setAccounts] = useState<{ id: string; name: string; accountType: string }[]>([]);
+    const [accountFilter, setAccountFilter] = useState('');
 
     useEffect(() => { fetchEntries(); }, []);
+    useEffect(() => { fetchAccounts(); }, []);
+    // Auto-fetch when filters change
+    useEffect(() => { fetchEntries(); }, [accountFilter, outcomeFilter]);
 
     const fetchEntries = useCallback(async () => {
         setLoading(true);
@@ -329,6 +334,7 @@ export default function HistoryPage() {
             const params = new URLSearchParams();
             if (search) params.set('search', search);
             if (outcomeFilter) params.set('outcome', outcomeFilter);
+            if (accountFilter) params.set('accountId', accountFilter);
             Object.entries(advancedFilters).forEach(([key, value]) => { if (value) params.set(key, value); });
 
             const response = await fetch(`/api/journal?${params.toString()}`);
@@ -341,7 +347,19 @@ export default function HistoryPage() {
         } finally {
             setLoading(false);
         }
-    }, [search, outcomeFilter, advancedFilters]);
+    }, [search, outcomeFilter, accountFilter, advancedFilters]);
+
+    const fetchAccounts = async () => {
+        try {
+            const response = await fetch('/api/accounts');
+            if (response.ok) {
+                const data = await response.json();
+                setAccounts(data.accounts || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch accounts:', error);
+        }
+    };
 
     const handleSearch = (e: React.FormEvent) => { e.preventDefault(); fetchEntries(); };
 
@@ -502,35 +520,166 @@ export default function HistoryPage() {
                 </button>
             </div>
 
-            {/* Search Bar Row */}
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', alignItems: 'center' }}>
-                <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Search by instrument, strategy..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    style={{ flex: 1, background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '0.75rem 1rem', color: 'var(--color-text)' }}
-                />
-                <select
-                    className="form-select"
-                    value={outcomeFilter}
-                    onChange={(e) => setOutcomeFilter(e.target.value)}
-                    style={{ background: 'var(--color-accent)', color: 'white', border: 'none', borderRadius: '8px', padding: '0.75rem 1rem', minWidth: '140px', cursor: 'pointer' }}
-                >
-                    <option value="">All Outcomes</option>
-                    <option value="WIN">Win</option>
-                    <option value="LOSS">Loss</option>
-                    <option value="BE">Break Even</option>
-                    <option value="RUNNING">Running</option>
-                </select>
-                <button type="submit" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <SearchIcon /> Search
-                </button>
-                <button type="button" className="btn btn-primary" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} style={{ padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    ▼ More
-                </button>
-            </form>
+            {/* Search & Filter Bar - Premium UI */}
+            <div style={{
+                background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
+                border: '1px solid var(--color-border)',
+                borderRadius: '16px',
+                padding: '1rem',
+                marginBottom: '1.5rem',
+                backdropFilter: 'blur(10px)',
+            }}>
+                <form onSubmit={handleSearch} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    {/* Search Input */}
+                    <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+                        <SearchIcon />
+                        <input
+                            type="text"
+                            placeholder="Search trades..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            style={{
+                                width: '100%',
+                                background: 'var(--color-bg-secondary)',
+                                border: '2px solid transparent',
+                                borderRadius: '12px',
+                                padding: '0.875rem 1rem 0.875rem 2.5rem',
+                                color: 'var(--color-text)',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s ease',
+                            }}
+                        />
+                    </div>
+
+                    {/* Account Filter */}
+                    <select
+                        value={accountFilter}
+                        onChange={(e) => setAccountFilter(e.target.value)}
+                        style={{
+                            background: accountFilter ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'var(--color-bg-secondary)',
+                            color: accountFilter ? 'white' : 'var(--color-text)',
+                            border: '2px solid var(--color-border)',
+                            borderRadius: '12px',
+                            padding: '0.875rem 1.25rem',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            minWidth: '160px',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        <option value="">🏦 All Accounts</option>
+                        {accounts.map(acc => (
+                            <option key={acc.id} value={acc.id}>
+                                {acc.accountType === 'PROP_FIRM' ? '🏢' : acc.accountType === 'DEMO' ? '📝' : acc.accountType === 'CHALLENGE' ? '🎯' : '👤'} {acc.name}
+                            </option>
+                        ))}
+                    </select>
+
+                    {/* Outcome Filter */}
+                    <select
+                        value={outcomeFilter}
+                        onChange={(e) => setOutcomeFilter(e.target.value)}
+                        style={{
+                            background: outcomeFilter === 'WIN' ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' :
+                                outcomeFilter === 'LOSS' ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)' :
+                                    outcomeFilter ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'var(--color-bg-secondary)',
+                            color: outcomeFilter ? 'white' : 'var(--color-text)',
+                            border: '2px solid var(--color-border)',
+                            borderRadius: '12px',
+                            padding: '0.875rem 1.25rem',
+                            fontSize: '0.9rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            minWidth: '150px',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        <option value="">🎯 All Outcomes</option>
+                        <option value="WIN">✅ Wins</option>
+                        <option value="LOSS">❌ Losses</option>
+                        <option value="BE">➖ Break Even</option>
+                        <option value="RUNNING">🔵 Running</option>
+                    </select>
+
+                    {/* Search Button */}
+                    <button
+                        type="submit"
+                        style={{
+                            background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)',
+                            border: 'none',
+                            borderRadius: '12px',
+                            padding: '0.875rem 1.5rem',
+                            color: 'white',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.5rem',
+                            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                            boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+                        }}
+                    >
+                        <SearchIcon /> Search
+                    </button>
+
+                    {/* More Filters */}
+                    <button
+                        type="button"
+                        onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+                        style={{
+                            background: showAdvancedFilters ? 'var(--color-accent)' : 'var(--color-bg-secondary)',
+                            border: '2px solid var(--color-border)',
+                            borderRadius: '12px',
+                            padding: '0.875rem 1rem',
+                            color: showAdvancedFilters ? 'white' : 'var(--color-text)',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        {showAdvancedFilters ? '✕ Less' : '⚙️ More'}
+                    </button>
+                </form>
+
+                {/* Active Filters Badge */}
+                {(accountFilter || outcomeFilter) && (
+                    <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {accountFilter && (
+                            <span style={{
+                                background: 'rgba(99, 102, 241, 0.2)',
+                                color: '#818cf8',
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '20px',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                            }}>
+                                🏦 {accounts.find(a => a.id === accountFilter)?.name}
+                                <button onClick={() => setAccountFilter('')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: '1rem' }}>×</button>
+                            </span>
+                        )}
+                        {outcomeFilter && (
+                            <span style={{
+                                background: outcomeFilter === 'WIN' ? 'rgba(34, 197, 94, 0.2)' : outcomeFilter === 'LOSS' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                                color: outcomeFilter === 'WIN' ? '#4ade80' : outcomeFilter === 'LOSS' ? '#f87171' : '#fbbf24',
+                                padding: '0.35rem 0.75rem',
+                                borderRadius: '20px',
+                                fontSize: '0.8rem',
+                                fontWeight: 500,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem',
+                            }}>
+                                {outcomeFilter}
+                                <button onClick={() => setOutcomeFilter('')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, fontSize: '1rem' }}>×</button>
+                            </span>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Advanced Filters */}
             {showAdvancedFilters && (
@@ -569,7 +718,8 @@ export default function HistoryPage() {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Stats Cards Row */}
             <div className="grid grid-4" style={{ marginBottom: '1.5rem', gap: '1rem' }}>
@@ -592,220 +742,222 @@ export default function HistoryPage() {
             </div>
 
             {/* Entries List */}
-            {filteredEntries.length === 0 ? (
-                <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-                    <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', opacity: 0.5 }}><InboxIcon /></div>
-                    <h3>{activeTab === 'backtest' ? 'No Backtest Trades' : 'No Entries Found'}</h3>
-                    <p style={{ color: 'var(--color-text-muted)' }}>
-                        {activeTab === 'backtest'
-                            ? 'Run backtests to see simulated trades here.'
-                            : 'Start journaling your trades to see them here.'}
-                    </p>
-                </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {filteredEntries.map((entry) => {
-                        const isExpanded = expandedId === entry.id;
-                        const dateInfo = formatDate(entry.createdAt);
-                        return (
-                            <div key={entry.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', overflow: 'hidden' }} onClick={() => setExpandedId(isExpanded ? null : entry.id)}>
-                                {/* Collapsed View - Matching Original Design */}
-                                <div style={{ display: 'flex', alignItems: 'center', padding: '1rem', gap: '1rem' }}>
-                                    {/* Date Column */}
-                                    <div style={{ textAlign: 'center', minWidth: '45px' }}>
-                                        <div style={{ fontSize: '1.5rem', fontWeight: '700', lineHeight: 1, color: 'var(--color-text)' }}>{dateInfo.day}</div>
-                                        <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{dateInfo.month}</div>
+            {
+                filteredEntries.length === 0 ? (
+                    <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+                        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center', opacity: 0.5 }}><InboxIcon /></div>
+                        <h3>{activeTab === 'backtest' ? 'No Backtest Trades' : 'No Entries Found'}</h3>
+                        <p style={{ color: 'var(--color-text-muted)' }}>
+                            {activeTab === 'backtest'
+                                ? 'Run backtests to see simulated trades here.'
+                                : 'Start journaling your trades to see them here.'}
+                        </p>
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {filteredEntries.map((entry) => {
+                            const isExpanded = expandedId === entry.id;
+                            const dateInfo = formatDate(entry.createdAt);
+                            return (
+                                <div key={entry.id} className="card" style={{ cursor: 'pointer', transition: 'all 0.2s', overflow: 'hidden' }} onClick={() => setExpandedId(isExpanded ? null : entry.id)}>
+                                    {/* Collapsed View - Matching Original Design */}
+                                    <div style={{ display: 'flex', alignItems: 'center', padding: '1rem', gap: '1rem' }}>
+                                        {/* Date Column */}
+                                        <div style={{ textAlign: 'center', minWidth: '45px' }}>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: '700', lineHeight: 1, color: 'var(--color-text)' }}>{dateInfo.day}</div>
+                                            <div style={{ fontSize: '0.65rem', color: 'var(--color-text-muted)' }}>{dateInfo.month}</div>
+                                        </div>
+
+                                        {/* Instrument & Details */}
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                <strong style={{ fontSize: '1rem', color: 'var(--color-text)' }}>{entry.instrument || 'Unknown'}</strong>
+                                                {entry.tradeType && (
+                                                    <span style={{ background: entry.tradeType === 'BUY' ? 'var(--color-profit)' : 'var(--color-loss)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '600' }}>
+                                                        {entry.tradeType}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
+                                                {entry.timeframe && (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <ClockIcon /> {entry.timeframe}
+                                                    </span>
+                                                )}
+                                                {entry.strategyLogic && (
+                                                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                        <ChartIcon /> {entry.strategyLogic.length > 30 ? entry.strategyLogic.substring(0, 30) + '...' : entry.strategyLogic}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Outcome Badge */}
+                                        <div style={{ ...getOutcomeStyle(entry.outcome), padding: '0.4rem 1rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                            {entry.outcome === 'WIN' && '✓'} {entry.outcome || 'RUNNING'}
+                                        </div>
                                     </div>
 
-                                    {/* Instrument & Details */}
-                                    <div style={{ flex: 1 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-                                            <strong style={{ fontSize: '1rem', color: 'var(--color-text)' }}>{entry.instrument || 'Unknown'}</strong>
-                                            {entry.tradeType && (
-                                                <span style={{ background: entry.tradeType === 'BUY' ? 'var(--color-profit)' : 'var(--color-loss)', color: 'white', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '600' }}>
-                                                    {entry.tradeType}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-muted)', fontSize: '0.8rem' }}>
-                                            {entry.timeframe && (
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <ClockIcon /> {entry.timeframe}
-                                                </span>
-                                            )}
-                                            {entry.strategyLogic && (
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                                                    <ChartIcon /> {entry.strategyLogic.length > 30 ? entry.strategyLogic.substring(0, 30) + '...' : entry.strategyLogic}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Outcome Badge */}
-                                    <div style={{ ...getOutcomeStyle(entry.outcome), padding: '0.4rem 1rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                        {entry.outcome === 'WIN' && '✓'} {entry.outcome || 'RUNNING'}
-                                    </div>
-                                </div>
-
-                                {/* Expanded View */}
-                                {isExpanded && (
-                                    <div style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
-                                        {/* Price Info */}
-                                        <div className="grid grid-4" style={{ marginBottom: '1.5rem', gap: '1rem' }}>
-                                            <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
-                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Entry</div>
-                                                <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-text)' }}>{entry.entryPrice ?? '—'}</div>
-                                            </div>
-                                            <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
-                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Stop Loss</div>
-                                                <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-loss)' }}>{entry.stopLoss ?? '—'}</div>
-                                            </div>
-                                            <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
-                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Target</div>
-                                                <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-profit)' }}>{entry.target ?? '—'}</div>
-                                            </div>
-                                            <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
-                                                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>R:R</div>
-                                                <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-accent)' }}>{entry.riskReward ?? '—'}</div>
-                                            </div>
-                                        </div>
-
-                                        {/* Emotion */}
-                                        {entry.emotionState && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>Emotion:</strong>
-                                                <span className="tag" style={{ marginLeft: '0.5rem', background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>
-                                                    {entry.emotionState}
-                                                </span>
-                                            </div>
-                                        )}
-
-                                        {/* ICT Checklist */}
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <strong style={{ color: 'var(--color-text)' }}>ICT Checklist:</strong>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                                                {entry.htfBiasAligned && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>HTF Bias</span>}
-                                                {entry.liquidityTaken && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>Liquidity</span>}
-                                                {entry.entryAtPOI && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>POI Entry</span>}
-                                                {entry.riskManaged && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>Risk Managed</span>}
-                                                {entry.bosConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>BOS</span>}
-                                                {entry.mssConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>MSS</span>}
-                                                {entry.chochConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>CHoCH</span>}
-                                                {entry.orderBlockEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>OB</span>}
-                                                {entry.fvgEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>FVG</span>}
-                                                {entry.killZoneEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>Kill Zone</span>}
-                                            </div>
-                                        </div>
-
-                                        {/* Sessions */}
-                                        <div style={{ marginBottom: '1rem' }}>
-                                            <strong style={{ color: 'var(--color-text)' }}>Sessions:</strong>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-                                                {entry.asianSession && <span className="tag">Asian</span>}
-                                                {entry.londonSession && <span className="tag">London</span>}
-                                                {entry.nySession && <span className="tag">NY</span>}
-                                                {entry.londonClose && <span className="tag">London Close</span>}
-                                            </div>
-                                        </div>
-
-                                        {/* Trade Reason */}
-                                        {entry.tradeReason && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>Trade Reason:</strong>
-                                                <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.tradeReason}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Strategy Logic */}
-                                        {entry.strategyLogic && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-text)' }}>Strategy:</strong>
-                                                <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.strategyLogic}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Post Trade Reflection */}
-                                        <div style={{ background: 'var(--color-bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
-                                            <h4 style={{ marginBottom: '0.75rem', color: 'var(--color-accent)' }}>Post Trade Reflection</h4>
-                                            <div className="grid grid-2" style={{ gap: '1rem' }}>
-                                                <div>
-                                                    <strong style={{ color: 'var(--color-profit)' }}>What Went Well:</strong>
-                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWell || '—'}</p>
+                                    {/* Expanded View */}
+                                    {isExpanded && (
+                                        <div style={{ padding: '1.5rem', borderTop: '1px solid var(--color-border)', background: 'var(--color-bg-secondary)' }}>
+                                            {/* Price Info */}
+                                            <div className="grid grid-4" style={{ marginBottom: '1.5rem', gap: '1rem' }}>
+                                                <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
+                                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Entry</div>
+                                                    <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-text)' }}>{entry.entryPrice ?? '—'}</div>
                                                 </div>
-                                                <div>
-                                                    <strong style={{ color: 'var(--color-loss)' }}>What Went Wrong:</strong>
-                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWrong || '—'}</p>
+                                                <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
+                                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Stop Loss</div>
+                                                    <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-loss)' }}>{entry.stopLoss ?? '—'}</div>
+                                                </div>
+                                                <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
+                                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>Target</div>
+                                                    <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-profit)' }}>{entry.target ?? '—'}</div>
+                                                </div>
+                                                <div className="card" style={{ padding: '1rem', textAlign: 'center', background: 'var(--color-bg-tertiary)' }}>
+                                                    <div style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', marginBottom: '0.25rem' }}>R:R</div>
+                                                    <div style={{ fontWeight: '600', fontSize: '1.1rem', color: 'var(--color-accent)' }}>{entry.riskReward ?? '—'}</div>
                                                 </div>
                                             </div>
-                                            <div style={{ marginTop: '1rem' }}>
-                                                <strong style={{ color: 'var(--color-accent)' }}>Improvement:</strong>
-                                                <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.improvement || '—'}</p>
-                                            </div>
-                                        </div>
 
-                                        {/* Screenshots */}
-                                        {entry.screenshot && (() => {
-                                            const screenshots = entry.screenshot.split('|||').filter(Boolean);
-                                            return (
+                                            {/* Emotion */}
+                                            {entry.emotionState && (
                                                 <div style={{ marginBottom: '1rem' }}>
-                                                    <strong style={{ color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ImageIcon /> Trade Screenshot{screenshots.length > 1 ? 's' : ''}: <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''} - click to enlarge)</span></strong>
-                                                    <div style={{
-                                                        marginTop: '0.5rem',
-                                                        display: 'grid',
-                                                        gridTemplateColumns: screenshots.length > 1 ? 'repeat(auto-fill, minmax(150px, 1fr))' : '1fr',
-                                                        gap: '0.75rem'
-                                                    }}>
-                                                        {screenshots.map((img, idx) => (
-                                                            <div key={idx} style={{
-                                                                borderRadius: '12px',
-                                                                overflow: 'hidden',
-                                                                border: '2px solid var(--color-border)',
-                                                                cursor: 'pointer',
-                                                                transition: 'transform 0.2s, border-color 0.2s',
-                                                            }}
-                                                                onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
-                                                                onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'scale(1)'; }}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setLightbox({ images: screenshots, index: idx });
-                                                                }}>
-                                                                <img
-                                                                    src={img}
-                                                                    alt={`Trade screenshot ${idx + 1}`}
-                                                                    style={{
-                                                                        width: '100%',
-                                                                        height: screenshots.length > 1 ? '120px' : '300px',
-                                                                        objectFit: 'cover',
-                                                                        background: 'var(--color-bg-tertiary)',
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                        ))}
+                                                    <strong style={{ color: 'var(--color-text)' }}>Emotion:</strong>
+                                                    <span className="tag" style={{ marginLeft: '0.5rem', background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>
+                                                        {entry.emotionState}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* ICT Checklist */}
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <strong style={{ color: 'var(--color-text)' }}>ICT Checklist:</strong>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                                                    {entry.htfBiasAligned && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>HTF Bias</span>}
+                                                    {entry.liquidityTaken && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>Liquidity</span>}
+                                                    {entry.entryAtPOI && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>POI Entry</span>}
+                                                    {entry.riskManaged && <span className="tag" style={{ background: 'var(--color-profit-glow)', color: 'var(--color-profit)' }}>Risk Managed</span>}
+                                                    {entry.bosConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>BOS</span>}
+                                                    {entry.mssConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>MSS</span>}
+                                                    {entry.chochConfirmed && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>CHoCH</span>}
+                                                    {entry.orderBlockEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>OB</span>}
+                                                    {entry.fvgEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>FVG</span>}
+                                                    {entry.killZoneEntry && <span className="tag" style={{ background: 'var(--color-accent-glow)', color: 'var(--color-accent)' }}>Kill Zone</span>}
+                                                </div>
+                                            </div>
+
+                                            {/* Sessions */}
+                                            <div style={{ marginBottom: '1rem' }}>
+                                                <strong style={{ color: 'var(--color-text)' }}>Sessions:</strong>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                                                    {entry.asianSession && <span className="tag">Asian</span>}
+                                                    {entry.londonSession && <span className="tag">London</span>}
+                                                    {entry.nySession && <span className="tag">NY</span>}
+                                                    {entry.londonClose && <span className="tag">London Close</span>}
+                                                </div>
+                                            </div>
+
+                                            {/* Trade Reason */}
+                                            {entry.tradeReason && (
+                                                <div style={{ marginBottom: '1rem' }}>
+                                                    <strong style={{ color: 'var(--color-text)' }}>Trade Reason:</strong>
+                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.tradeReason}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Strategy Logic */}
+                                            {entry.strategyLogic && (
+                                                <div style={{ marginBottom: '1rem' }}>
+                                                    <strong style={{ color: 'var(--color-text)' }}>Strategy:</strong>
+                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.strategyLogic}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Post Trade Reflection */}
+                                            <div style={{ background: 'var(--color-bg-tertiary)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem' }}>
+                                                <h4 style={{ marginBottom: '0.75rem', color: 'var(--color-accent)' }}>Post Trade Reflection</h4>
+                                                <div className="grid grid-2" style={{ gap: '1rem' }}>
+                                                    <div>
+                                                        <strong style={{ color: 'var(--color-profit)' }}>What Went Well:</strong>
+                                                        <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWell || '—'}</p>
+                                                    </div>
+                                                    <div>
+                                                        <strong style={{ color: 'var(--color-loss)' }}>What Went Wrong:</strong>
+                                                        <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.whatWentWrong || '—'}</p>
                                                     </div>
                                                 </div>
-                                            );
-                                        })()}
-
-                                        {/* Raw Transcript */}
-                                        {entry.rawTranscript && (
-                                            <div style={{ marginBottom: '1rem' }}>
-                                                <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MicIcon /> Original Transcript:</strong>
-                                                <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>{entry.rawTranscript}</p>
+                                                <div style={{ marginTop: '1rem' }}>
+                                                    <strong style={{ color: 'var(--color-accent)' }}>Improvement:</strong>
+                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>{entry.improvement || '—'}</p>
+                                                </div>
                                             </div>
-                                        )}
 
-                                        {/* Actions */}
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
-                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleEditClick(entry); }} style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><EditIcon /> Edit</button>
-                                            <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry); }} style={{ padding: '0.5rem 1rem', color: 'var(--color-loss)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><TrashIcon /> Delete</button>
+                                            {/* Screenshots */}
+                                            {entry.screenshot && (() => {
+                                                const screenshots = entry.screenshot.split('|||').filter(Boolean);
+                                                return (
+                                                    <div style={{ marginBottom: '1rem' }}>
+                                                        <strong style={{ color: 'var(--color-text)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ImageIcon /> Trade Screenshot{screenshots.length > 1 ? 's' : ''}: <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: '0.85rem' }}>({screenshots.length} image{screenshots.length > 1 ? 's' : ''} - click to enlarge)</span></strong>
+                                                        <div style={{
+                                                            marginTop: '0.5rem',
+                                                            display: 'grid',
+                                                            gridTemplateColumns: screenshots.length > 1 ? 'repeat(auto-fill, minmax(150px, 1fr))' : '1fr',
+                                                            gap: '0.75rem'
+                                                        }}>
+                                                            {screenshots.map((img, idx) => (
+                                                                <div key={idx} style={{
+                                                                    borderRadius: '12px',
+                                                                    overflow: 'hidden',
+                                                                    border: '2px solid var(--color-border)',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'transform 0.2s, border-color 0.2s',
+                                                                }}
+                                                                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--color-accent)'; e.currentTarget.style.transform = 'scale(1.02)'; }}
+                                                                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.transform = 'scale(1)'; }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setLightbox({ images: screenshots, index: idx });
+                                                                    }}>
+                                                                    <img
+                                                                        src={img}
+                                                                        alt={`Trade screenshot ${idx + 1}`}
+                                                                        style={{
+                                                                            width: '100%',
+                                                                            height: screenshots.length > 1 ? '120px' : '300px',
+                                                                            objectFit: 'cover',
+                                                                            background: 'var(--color-bg-tertiary)',
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })()}
+
+                                            {/* Raw Transcript */}
+                                            {entry.rawTranscript && (
+                                                <div style={{ marginBottom: '1rem' }}>
+                                                    <strong style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><MicIcon /> Original Transcript:</strong>
+                                                    <p style={{ marginTop: '0.25rem', color: 'var(--color-text-muted)', fontStyle: 'italic', fontSize: '0.9rem' }}>{entry.rawTranscript}</p>
+                                                </div>
+                                            )}
+
+                                            {/* Actions */}
+                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
+                                                <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleEditClick(entry); }} style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><EditIcon /> Edit</button>
+                                                <button className="btn btn-secondary" onClick={(e) => { e.stopPropagation(); handleDeleteClick(entry); }} style={{ padding: '0.5rem 1rem', color: 'var(--color-loss)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><TrashIcon /> Delete</button>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )
+            }
 
             {/* Image Lightbox */}
             <ImageModal
@@ -815,6 +967,6 @@ export default function HistoryPage() {
                 onNext={() => setLightbox(prev => ({ ...prev, index: prev.index + 1 }))}
                 onPrev={() => setLightbox(prev => ({ ...prev, index: prev.index - 1 }))}
             />
-        </div>
+        </div >
     );
 }

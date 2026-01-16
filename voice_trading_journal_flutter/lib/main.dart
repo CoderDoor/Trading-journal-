@@ -14,10 +14,14 @@ import 'screens/profile_screen.dart';
 import 'screens/rulebook_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/onboarding_screen.dart';
+import 'screens/accounts_screen.dart';
+import 'services/notification_service.dart';
+import 'services/connectivity_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService.init();
   
   runApp(
     MultiProvider(
@@ -72,6 +76,7 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   void initState() {
     super.initState();
+    ConnectivityService().init();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<JournalProvider>().loadEntries();
     });
@@ -80,15 +85,25 @@ class _MainNavigationState extends State<MainNavigation> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: const [
-          HomeScreen(),
-          HistoryScreen(),
-          AnalyticsScreen(),
-          CalendarScreen(),
-          RulebookScreen(),
-          ProfileScreen(),
+      body: Column(
+        children: [
+          // Offline indicator at top
+          const OfflineIndicator(),
+          // Main content
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: const [
+                HomeScreen(),
+                HistoryScreen(),
+                AnalyticsScreen(),
+                CalendarScreen(),
+                RulebookScreen(),
+                AccountsScreen(),
+                ProfileScreen(),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -114,7 +129,8 @@ class _MainNavigationState extends State<MainNavigation> {
                 _buildNavItem(2, Icons.analytics, 'Stats'),
                 _buildNavItem(3, Icons.calendar_month, 'Calendar'),
                 _buildNavItem(4, Icons.menu_book, 'Rules'),
-                _buildNavItem(5, Icons.person, 'Profile'),
+                _buildNavItem(5, Icons.account_balance, 'Accounts'),
+                _buildNavItem(6, Icons.person, 'Profile'),
               ],
             ),
           ),
@@ -128,7 +144,7 @@ class _MainNavigationState extends State<MainNavigation> {
     final authProvider = context.watch<app_auth.AuthProvider>();
     
     // Show sync indicator on profile if logged in
-    final showSyncDot = index == 5 && authProvider.isLoggedIn;
+    final showSyncDot = index == 6 && authProvider.isLoggedIn;
     
     final primaryColor = Theme.of(context).colorScheme.primary;
     final mutedColor = Theme.of(context).textTheme.bodySmall?.color ?? Colors.grey;

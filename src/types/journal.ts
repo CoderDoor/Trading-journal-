@@ -73,6 +73,8 @@ export interface JournalFormData {
     outcome: string;
     tradeReason: string;
     strategyLogic: string;
+    // Trading Account
+    accountId: string;
     // Pre-Trade Checklist
     htfBiasAligned: boolean;
     liquidityTaken: boolean;

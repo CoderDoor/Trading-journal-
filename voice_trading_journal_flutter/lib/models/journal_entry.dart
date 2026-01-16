@@ -38,6 +38,7 @@ class JournalEntry {
   
   final String? screenshot;
   final String? rawTranscript;
+  final String? accountId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -73,6 +74,7 @@ class JournalEntry {
     this.improvement,
     this.screenshot,
     this.rawTranscript,
+    this.accountId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -110,6 +112,7 @@ class JournalEntry {
       'improvement': improvement,
       'screenshot': screenshot,
       'rawTranscript': rawTranscript,
+      'accountId': accountId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -157,6 +160,7 @@ class JournalEntry {
       improvement: map['improvement'],
       screenshot: map['screenshot'],
       rawTranscript: map['rawTranscript'],
+      accountId: map['accountId'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );

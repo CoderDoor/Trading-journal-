@@ -5,7 +5,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import '../models/journal_entry.dart';
+import '../models/trading_account.dart';
 import '../providers/journal_provider.dart';
+import '../services/database_service.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -17,14 +19,22 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   String? _outcomeFilter;
+  String? _accountFilter;
+  List<TradingAccount> _accounts = [];
   final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _loadAccounts();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<JournalProvider>().loadEntries();
     });
+  }
+
+  Future<void> _loadAccounts() async {
+    final accounts = await DatabaseService.getAccounts();
+    if (mounted) setState(() => _accounts = accounts);
   }
 
   Future<void> _deleteEntry(String id) async {
@@ -64,6 +74,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     context.read<JournalProvider>().loadEntries(
       search: _searchQuery.isEmpty ? null : _searchQuery,
       outcome: _outcomeFilter,
+      accountId: _accountFilter,
     );
   }
 
@@ -116,6 +127,29 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgTertiary,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: PopupMenuButton<String?>(
+                          icon: Icon(
+                            Icons.account_balance,
+                            color: _accountFilter != null ? AppTheme.accent : AppTheme.textMuted,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          color: AppTheme.bgSecondary,
+                          onSelected: (v) {
+                            setState(() => _accountFilter = v);
+                            _applyFilters();
+                          },
+                          itemBuilder: (ctx) => [
+                            _buildFilterItem(null, '🔮 All Accounts', _accountFilter),
+                            ..._accounts.map((a) => _buildFilterItem(a.id, a.displayName, _accountFilter)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
                         decoration: BoxDecoration(
                           color: AppTheme.bgTertiary,

@@ -2,6 +2,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:uuid/uuid.dart';
 import '../models/journal_entry.dart';
+import '../models/trading_account.dart';
 
 class DatabaseService {
   static Database? _database;
@@ -56,6 +57,7 @@ class DatabaseService {
         improvement TEXT,
         screenshot TEXT,
         rawTranscript TEXT,
+        accountId TEXT,
         createdAt TEXT,
         updatedAt TEXT
       )
@@ -84,10 +86,26 @@ class DatabaseService {
       )
     ''');
 
+    await db.execute('''
+      CREATE TABLE trading_accounts (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        broker TEXT,
+        accountType TEXT DEFAULT 'PERSONAL',
+        accountSize REAL,
+        currency TEXT DEFAULT 'USD',
+        status TEXT DEFAULT 'ACTIVE',
+        notes TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
     // Create indexes
     await db.execute('CREATE INDEX idx_entries_createdAt ON journal_entries(createdAt)');
     await db.execute('CREATE INDEX idx_entries_instrument ON journal_entries(instrument)');
     await db.execute('CREATE INDEX idx_entries_outcome ON journal_entries(outcome)');
+    await db.execute('CREATE INDEX idx_entries_accountId ON journal_entries(accountId)');
   }
 
   // Journal Entry CRUD
@@ -324,4 +342,70 @@ class DatabaseService {
     
     return result;
   }
+
+  // ==================== TRADING ACCOUNTS ====================
+
+  static Future<TradingAccount> createAccount(TradingAccount account) async {
+    final db = await _initDB();
+    final id = account.id.isEmpty ? const Uuid().v4() : account.id;
+    final now = DateTime.now().toIso8601String();
+    
+    await db.insert('trading_accounts', {
+      ...account.toMap(),
+      'id': id,
+      'createdAt': now,
+      'updatedAt': now,
+    });
+    
+    return account.copyWith(id: id);
+  }
+
+  static Future<List<TradingAccount>> getAccounts() async {
+    final db = await _initDB();
+    final results = await db.query('trading_accounts', orderBy: 'name ASC');
+    return results.map((map) => TradingAccount.fromMap(map)).toList();
+  }
+
+  static Future<TradingAccount?> getAccount(String id) async {
+    final db = await _initDB();
+    final results = await db.query('trading_accounts', where: 'id = ?', whereArgs: [id]);
+    if (results.isEmpty) return null;
+    return TradingAccount.fromMap(results.first);
+  }
+
+  static Future<void> updateAccount(TradingAccount account) async {
+    final db = await _initDB();
+    await db.update(
+      'trading_accounts',
+      {...account.toMap(), 'updatedAt': DateTime.now().toIso8601String()},
+      where: 'id = ?',
+      whereArgs: [account.id],
+    );
+  }
+
+  static Future<void> deleteAccount(String id) async {
+    final db = await _initDB();
+    await db.delete('trading_accounts', where: 'id = ?', whereArgs: [id]);
+  }
+
+  // Get entries filtered by account
+  static Future<List<JournalEntry>> getEntriesByAccount(String? accountId, {int limit = 50}) async {
+    final db = await _initDB();
+    List<Map<String, dynamic>> results;
+    
+    if (accountId == null || accountId.isEmpty) {
+      results = await db.query('journal_entries', orderBy: 'createdAt DESC', limit: limit);
+    } else {
+      results = await db.query(
+        'journal_entries',
+        where: 'accountId = ?',
+        whereArgs: [accountId],
+        orderBy: 'createdAt DESC',
+        limit: limit,
+      );
+    }
+    
+    return results.map((map) => JournalEntry.fromMap(map)).toList();
+  }
 }
+

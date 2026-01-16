@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /sync
+Disallow: /journal
+Disallow: /dashboard
+Disallow: /history
+
+# Sitemap
+Sitemap: https://trackedge.app/sitemap.xml
